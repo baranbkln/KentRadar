@@ -6,6 +6,7 @@ import { ArrowLeft, ExternalLink, LogOut, MapPin } from "lucide-react";
 import { MagicLinkForm } from "@/components/auth/magic-link-form";
 import { AppShell } from "@/components/layout/app-shell";
 import { GlassPanel } from "@/components/map/glass-panel";
+import { useCivicDashboard } from "@/hooks/use-civic-dashboard";
 import {
   categoryLabels,
   severityLabels,
@@ -16,6 +17,7 @@ import {
   getIssueIntensityClassName,
 } from "@/lib/issues/issue-intensity";
 import type {
+  CivicDashboard,
   ProfileEntry,
   ProfileSummary,
   ProfileWatchedIssue,
@@ -87,6 +89,13 @@ export function ProfilePage() {
     null,
   );
   const [activeTab, setActiveTab] = useState<ProfileTab>("active");
+  const {
+    dashboard,
+    dashboardError,
+    isLoadingDashboard,
+    loadDashboard,
+    resetDashboard,
+  } = useCivicDashboard(supabase);
 
   useEffect(() => {
     if (!supabase) {
@@ -135,12 +144,16 @@ export function ProfilePage() {
       { data: summaryData, error: summaryError },
       { data: entriesData, error: entriesError },
       { data: watchedData, error: watchedError },
+      dashboardData,
     ] =
       await Promise.all([
         supabase.rpc("get_my_profile_summary"),
         supabase.rpc("get_my_profile_entries"),
         supabase.rpc("get_my_watched_issues"),
+        loadDashboard(),
       ]);
+
+    void dashboardData;
 
     if (watchedError && process.env.NODE_ENV === "development") {
       console.error("get_my_watched_issues RPC error", watchedError);
@@ -300,6 +313,7 @@ export function ProfilePage() {
     setSummary(emptySummary);
     setEntries([]);
     setWatchedIssues([]);
+    resetDashboard();
     setFeedback("Çıkış yapıldı.");
   }
 
@@ -414,10 +428,13 @@ export function ProfilePage() {
               {profileError ? (
                 <StatusMessage tone="error">{profileError}</StatusMessage>
               ) : null}
+              {dashboardError ? (
+                <StatusMessage tone="error">{dashboardError}</StatusMessage>
+              ) : null}
 
-              <SummaryCards
-                summary={summary}
-                watchedCount={watchedIssues.length}
+              <CivicDashboardPanel
+                dashboard={dashboardError ? toDashboardFallback(summary, watchedIssues.length) : dashboard}
+                isLoading={isLoadingDashboard}
               />
               <ProfileTabs
                 activeTab={activeTab}
@@ -517,32 +534,128 @@ function LoginPanel({ authStatus }: { authStatus: AuthStatus }) {
   );
 }
 
-function SummaryCards({
-  summary,
-  watchedCount,
+function CivicDashboardPanel({
+  dashboard,
+  isLoading,
 }: {
-  summary: ProfileSummary;
-  watchedCount: number;
+  dashboard: CivicDashboard;
+  isLoading: boolean;
 }) {
-  const cards = [
-    ["Aktif bildirimlerim", summary.active_report_count],
-    ["Hasar bildirimlerim", summary.damage_report_count],
-    ["Doğrulamalarım", summary.verification_count],
-    ["Takip ettiklerim", watchedCount],
-    ["Geri çekilenler", summary.withdrawn_report_count],
-    ["Çözüldü bildirimlerim", summary.solved_report_count],
+  const contributionCards = [
+    ["Bildirdiğin sorunlar", dashboard.active_report_count],
+    ["Takip ettiklerin", dashboard.watched_issue_count],
+    ["Doğruladıkların", dashboard.verification_count],
+    ["Hasar bildirimlerin", dashboard.damage_report_count],
+    ["Çözüldü işaretlerin", dashboard.solved_report_count],
+    ["Geri çekilenler", dashboard.withdrawn_report_count],
   ] as const;
+  const hasImpact =
+    dashboard.received_verification_count > 0 ||
+    dashboard.received_damage_count > 0 ||
+    dashboard.received_solved_count > 0 ||
+    dashboard.received_watcher_count > 0 ||
+    dashboard.active_reporter_count_on_my_issues > 0;
 
   return (
-    <div className="grid grid-cols-2 gap-2 md:grid-cols-6">
-      {cards.map(([label, value]) => (
-        <GlassPanel className="p-3" key={label}>
-          <p className="text-xl font-semibold text-ink">{value}</p>
-          <p className="mt-1 text-xs font-semibold leading-5 text-ink-muted">
-            {label}
+    <GlassPanel className="p-4 md:p-5">
+      <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase text-ink-subtle">
+            Profil özeti
           </p>
-        </GlassPanel>
-      ))}
+          <h2 className="mt-1 text-xl font-semibold text-ink">
+            Kişisel Etki Karnesi
+          </h2>
+          <p className="mt-1 max-w-2xl text-sm leading-6 text-ink-muted">
+            YolDurumu’na yaptığın katkıların ve takip ettiğin sorunların özeti.
+          </p>
+        </div>
+        {isLoading ? (
+          <p className="text-sm font-semibold text-ink-muted">
+            Karne güncelleniyor...
+          </p>
+        ) : null}
+      </div>
+
+      <div className="mt-4 grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-6">
+        {contributionCards.map(([label, value]) => (
+          <MetricCard key={label} label={label} value={value} />
+        ))}
+      </div>
+
+      <div className="mt-4 rounded-[24px] border border-slate-200 bg-white/58 p-3 md:p-4">
+        <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h3 className="text-base font-semibold text-ink">Etki özeti</h3>
+            <p className="mt-1 text-sm leading-5 text-ink-muted">
+              Bildirdiğin sorunlar etkileşim aldıkça burada özetlenir.
+            </p>
+          </div>
+          {dashboard.highest_interaction_issue_id ? (
+            <Link
+              className="inline-flex min-h-10 items-center gap-2 rounded-full border border-slate-200 bg-white/80 px-3 text-sm font-semibold text-ink transition hover:bg-white"
+              href={`/?issue=${dashboard.highest_interaction_issue_id}`}
+            >
+              En etkileşimli bildirimi gör
+              <MapPin className="size-4" />
+            </Link>
+          ) : null}
+        </div>
+
+        {hasImpact ? (
+          <div className="mt-3 grid gap-2 md:grid-cols-2">
+            <ImpactLine
+              label="Bağımsız doğrulama"
+              text={`Bildirdiğin sorunlar ${dashboard.received_verification_count} doğrulama aldı.`}
+            />
+            <ImpactLine
+              label="Hasar bildirimi"
+              text={`Bildirdiğin sorunlarda ${dashboard.received_damage_count} araç hasarı bildirildi.`}
+            />
+            <ImpactLine
+              label="Çözüldü işaretleri"
+              text={`${dashboard.received_solved_count} çözüldü işareti bu bildirimlere geldi.`}
+            />
+            <ImpactLine
+              label="Takip"
+              text={`Bildirdiğin sorunlar toplam ${dashboard.received_watcher_count} kez takip ediliyor.`}
+            />
+            <ImpactLine
+              label="Ortalama açık süre"
+              text={`${formatNumber(dashboard.avg_open_days_on_my_active_issues)} gün açık görünüyor.`}
+            />
+            <ImpactLine
+              label="Toplam bildiren"
+              text={`Bu sorunlarda toplam ${dashboard.active_reporter_count_on_my_issues} aktif bildirim var.`}
+            />
+          </div>
+        ) : (
+          <p className="mt-3 rounded-2xl border border-slate-200 bg-white/70 px-3 py-2 text-sm text-ink-muted">
+            Henüz bildirim yapmadın. Haritadan bir yol sorunu ekleyerek katkı
+            sağlamaya başlayabilirsin.
+          </p>
+        )}
+      </div>
+    </GlassPanel>
+  );
+}
+
+function MetricCard({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white/62 p-3">
+      <p className="text-xl font-semibold text-ink">{value}</p>
+      <p className="mt-1 text-xs font-semibold leading-5 text-ink-muted">
+        {label}
+      </p>
+    </div>
+  );
+}
+
+function ImpactLine({ label, text }: { label: string; text: string }) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white/64 p-3">
+      <p className="text-xs font-semibold uppercase text-ink-subtle">{label}</p>
+      <p className="mt-1 text-sm leading-5 text-ink">{text}</p>
     </div>
   );
 }
@@ -1012,6 +1125,26 @@ function parseWatchedIssues(value: unknown): ProfileWatchedIssue[] {
   });
 }
 
+function toDashboardFallback(
+  summary: ProfileSummary,
+  watchedCount: number,
+): CivicDashboard {
+  return {
+    ...summary,
+    active_reporter_count_on_my_issues: summary.active_report_count,
+    avg_open_days_on_my_active_issues: 0,
+    highest_interaction_issue_id: null,
+    highest_interaction_label: null,
+    highest_interaction_score: 0,
+    received_damage_count: 0,
+    received_false_report_count: 0,
+    received_solved_count: 0,
+    received_verification_count: 0,
+    received_watcher_count: 0,
+    watched_issue_count: watchedCount,
+  };
+}
+
 function parseUserReportRows(value: unknown): UserReportRow[] {
   if (!Array.isArray(value)) {
     return [];
@@ -1266,6 +1399,12 @@ function formatDate(value: string) {
     month: "long",
     year: "numeric",
   }).format(new Date(value));
+}
+
+function formatNumber(value: number) {
+  return new Intl.NumberFormat("tr-TR", {
+    maximumFractionDigits: 1,
+  }).format(value);
 }
 
 function activityLabel(type: ProfileEntry["entry_type"]) {

@@ -79,6 +79,8 @@ export type IssueUserState = {
   has_withdrawn_report: boolean;
   has_damage_report: boolean;
   has_verified: boolean;
+  has_solved_report: boolean;
+  has_false_report: boolean;
 };
 
 export type ProfileSummary = {
@@ -88,6 +90,20 @@ export type ProfileSummary = {
   verification_count: number;
   solved_report_count: number;
   false_report_count: number;
+};
+
+export type CivicDashboard = ProfileSummary & {
+  watched_issue_count: number;
+  received_verification_count: number;
+  received_damage_count: number;
+  received_solved_count: number;
+  received_false_report_count: number;
+  received_watcher_count: number;
+  active_reporter_count_on_my_issues: number;
+  avg_open_days_on_my_active_issues: number;
+  highest_interaction_issue_id: string | null;
+  highest_interaction_score: number;
+  highest_interaction_label: string | null;
 };
 
 export type ProfileEntryType =

@@ -47,14 +47,14 @@ export function AddIssuePanel({
 }: AddIssuePanelProps) {
   return (
     <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[730] p-3 pb-[max(12px,env(safe-area-inset-bottom))] md:inset-x-auto md:bottom-5 md:left-5 md:top-28 md:w-[390px]">
-      <GlassPanel className="pointer-events-auto p-3 md:p-3.5">
-        <div className="mb-2.5 flex items-start justify-between gap-3">
+      <GlassPanel className="pointer-events-auto p-3">
+        <div className="mb-2 flex items-start justify-between gap-3">
           <div>
             <h2 className="text-base font-semibold text-ink">
               Yol sorunu bildir
             </h2>
             <p className="mt-0.5 text-xs leading-4 text-ink-muted">
-              Haritadan konum, sorun türü ve önem seviyesi seç.
+              Konum, tür ve önem seviyesi seç.
             </p>
           </div>
           <button
@@ -74,7 +74,7 @@ export function AddIssuePanel({
           />
         ) : (
           <div className="space-y-2">
-            <div className="rounded-2xl border border-slate-200 bg-white/62 p-2.5">
+            <div className="rounded-2xl border border-slate-200 bg-white/62 p-2">
               <p className="text-[11px] font-semibold uppercase text-ink-subtle">
                 Seçilen konum
               </p>
@@ -84,7 +84,7 @@ export function AddIssuePanel({
                   : "Henüz konum seçilmedi"}
               </p>
               <button
-                className="mt-2 inline-flex min-h-10 items-center justify-center gap-2 rounded-full border border-slate-200 bg-white/80 px-3 text-sm font-semibold text-ink transition hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-road-blue"
+                className="mt-1.5 inline-flex min-h-10 items-center justify-center gap-2 rounded-full border border-slate-200 bg-white/80 px-3 text-sm font-semibold text-ink transition hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-road-blue"
                 onClick={onUseCurrentLocation}
                 type="button"
               >
@@ -106,7 +106,7 @@ export function AddIssuePanel({
               onChange={(value) => onSeverityChange(value as RoadIssueSeverity)}
             />
 
-            <label className="flex min-h-11 items-center gap-3 rounded-2xl border border-slate-200 bg-white/62 p-2.5 text-sm text-ink">
+            <label className="flex min-h-11 items-center gap-3 rounded-2xl border border-slate-200 bg-white/62 p-2 text-sm text-ink">
               <input
                 checked={hasDamage}
                 className="size-4 accent-road-blue"
@@ -115,7 +115,7 @@ export function AddIssuePanel({
               />
               <span>
                 <span className="block font-semibold">Araç hasarı yaşadım</span>
-                <span className="mt-0.5 block text-xs leading-4 text-ink-muted">
+                <span className="mt-0.5 block text-[11px] leading-4 text-ink-muted">
                   Yalnızca sayı olarak tutulur.
                 </span>
               </span>

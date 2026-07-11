@@ -10,6 +10,7 @@ type IssueWatchButtonProps = {
   issueId: string;
   initialWatcherCount?: number | null;
   compact?: boolean;
+  hideCount?: boolean;
   hideInlineMessages?: boolean;
   showDescription?: boolean;
   onFeedback?: (message: string, tone: "error" | "success") => void;
@@ -19,6 +20,7 @@ export function IssueWatchButton({
   issueId,
   initialWatcherCount,
   compact = false,
+  hideCount = false,
   hideInlineMessages = false,
   onFeedback,
   showDescription = false,
@@ -105,11 +107,13 @@ export function IssueWatchButton({
         </button>
       </div>
 
-      <p className="mt-1.5 min-h-4 text-xs font-semibold text-ink-subtle">
-        {typeof watcherCount === "number" && watcherCount > 0
-          ? `${watcherCount} kişi takip ediyor`
-          : "\u00a0"}
-      </p>
+      {hideCount ? null : (
+        <p className="mt-1.5 min-h-4 text-xs font-semibold text-ink-subtle">
+          {typeof watcherCount === "number" && watcherCount > 0
+            ? `${watcherCount} kişi takip ediyor`
+            : "\u00a0"}
+        </p>
+      )}
 
       {!hideInlineMessages && feedback ? (
         <p className="mt-2 text-xs font-semibold text-emerald-700">

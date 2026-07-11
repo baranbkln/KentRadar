@@ -496,24 +496,33 @@ export function RoadIssueMap() {
     setIssueActionFeedback(null);
     setIsIssueActionAuthPromptVisible(false);
 
-    let location: BrowserLocation;
+    const isToggleOffAction =
+      (action === "solved" && issueUserState?.has_solved_report) ||
+      (action === "false_report" && issueUserState?.has_false_report);
+    let location: BrowserLocation = {
+      accuracyMeters: null,
+      latitude: issue.latitude,
+      longitude: issue.longitude,
+    };
 
-    try {
-      location = await getCurrentPosition();
-      setCurrentLocation(location);
-    } catch (locationError) {
-      setLoadingIssueAction(null);
-      setIssueActionFeedback({
-        message:
-          action === "damage"
-            ? `${getLocationErrorMessage(locationError)} Araç hasarı bildirimi için konum bilgisi gerekli.`
-            : getLocationErrorMessage(locationError),
-        tone: "error",
-      });
-      return;
+    if (!isToggleOffAction) {
+      try {
+        location = await getCurrentPosition();
+        setCurrentLocation(location);
+      } catch (locationError) {
+        setLoadingIssueAction(null);
+        setIssueActionFeedback({
+          message:
+            action === "damage"
+              ? `${getLocationErrorMessage(locationError)} Araç hasarı bildirimi için konum bilgisi gerekli.`
+              : getLocationErrorMessage(locationError),
+          tone: "error",
+        });
+        return;
+      }
     }
 
-    if (action !== "damage") {
+    if (action !== "damage" && !isToggleOffAction) {
       const distanceMeters = calculateDistanceMeters(location, issue);
 
       if (distanceMeters > ISSUE_ACTION_RANGE_METERS) {
@@ -526,7 +535,7 @@ export function RoadIssueMap() {
       }
     }
 
-    const { error: rpcError } = await supabase.rpc(getRpcName(action), {
+    const { data: rpcData, error: rpcError } = await supabase.rpc(getRpcName(action), {
       p_issue_id: issue.id,
       p_latitude: location.latitude,
       p_longitude: location.longitude,
@@ -554,7 +563,8 @@ export function RoadIssueMap() {
 
     setLoadingIssueAction(null);
     setIssueActionFeedback({
-      message: getIssueActionSuccessMessage(action),
+      message:
+        getIssueActionResultMessage(rpcData) ?? getIssueActionSuccessMessage(action),
       tone: "success",
     });
     setIssueUserState(await loadIssueUserState(issue.id));
@@ -944,6 +954,18 @@ function getIssueActionSuccessMessage(action: IssueActionType) {
   }
 }
 
+function getIssueActionResultMessage(value: unknown) {
+  const result = Array.isArray(value) ? value[0] : value;
+
+  if (!result || typeof result !== "object") {
+    return null;
+  }
+
+  const message = (result as Record<string, unknown>).message;
+
+  return typeof message === "string" && message.length > 0 ? message : null;
+}
+
 function getProximityMessage(action: IssueActionType) {
   switch (action) {
     case "verify":
@@ -1042,6 +1064,14 @@ function parseIssueUserState(value: unknown): IssueUserState | null {
   return {
     has_active_report: record.has_active_report,
     has_damage_report: record.has_damage_report,
+    has_false_report:
+      typeof record.has_false_report === "boolean"
+        ? record.has_false_report
+        : false,
+    has_solved_report:
+      typeof record.has_solved_report === "boolean"
+        ? record.has_solved_report
+        : false,
     has_verified: record.has_verified,
     has_withdrawn_report: record.has_withdrawn_report,
     issue_id: record.issue_id,

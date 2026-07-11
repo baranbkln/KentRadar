@@ -112,9 +112,9 @@ export function IssueDetailContent({
   }, [issue.id]);
 
   return (
-    <div className="space-y-2.5">
+    <div className="space-y-2">
       <div>
-        <div className="mb-2 flex flex-wrap items-center gap-1.5">
+        <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
           <Badge>{categoryLabels[issue.category]}</Badge>
           <Badge muted>{severityLabels[issue.severity]}</Badge>
           <Badge muted>{statusLabels[issue.status]}</Badge>
@@ -122,15 +122,15 @@ export function IssueDetailContent({
             {intensity.label}
           </IntensityBadge>
         </div>
-        <h2 className="text-xl font-semibold leading-tight text-ink">
+        <h2 className="text-lg font-semibold leading-tight text-ink">
           {categoryLabels[issue.category]}
         </h2>
-        <p className="mt-1 text-xs font-semibold text-ink-subtle">
+        <p className="mt-0.5 text-xs font-semibold text-ink-subtle">
           {daysOpen(issue.first_reported_at)} gündür açık görünüyor
         </p>
       </div>
 
-      <div className="rounded-2xl border border-slate-200 bg-white/62 p-2.5">
+      <div className="rounded-2xl border border-slate-200 bg-white/62 p-2">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-xs font-semibold text-ink">{intensity.label}</p>
           <div className="flex flex-wrap gap-2">
@@ -172,13 +172,14 @@ export function IssueDetailContent({
             </Link>
           </div>
         </div>
-        <p className="mt-1 text-xs leading-4 text-ink-muted">
+        <p className="mt-1 truncate text-xs leading-4 text-ink-muted">
           {getIssueIntensityDescription(issue)}
         </p>
       </div>
 
       <IssueWatchButton
         compact
+        hideCount
         hideInlineMessages
         initialWatcherCount={issue.watcher_count}
         issueId={issue.id}
@@ -196,7 +197,7 @@ export function IssueDetailContent({
         <MiniMetric label="Doğrulama" value={`${verifiedUserCount}`} />
         <MiniMetric label="Hasar" value={`${issue.damage_count}`} />
       </div>
-      <p className="text-xs text-ink-subtle">
+      <p className="text-[11px] text-ink-subtle">
         Son doğrulama: {formatLastVerified(issue.last_verified_at)}
       </p>
 
@@ -204,6 +205,7 @@ export function IssueDetailContent({
         {issueActions.map((action) => (
           <ActionButton
             action={action}
+            displayLabel={getActionDisplayLabel(action.value, userState)}
             disabledReason={getDisabledReason(action.value, userState)}
             isActionLoading={isActionLoading}
             issue={issue}
@@ -215,30 +217,28 @@ export function IssueDetailContent({
       </div>
 
       {userState?.has_active_report ? (
-        <div className="rounded-2xl border border-slate-200 bg-white/62 p-2.5">
+        <div className="rounded-2xl border border-slate-200 bg-white/62 p-2">
           {isWithdrawConfirmVisible ? (
-            <div className="space-y-2">
-              <p className="text-sm font-semibold text-ink">
-                Bu bildirimi geri çekmek istediğine emin misin?
+            <div className="grid grid-cols-[1fr_auto_auto] items-center gap-1.5">
+              <p className="min-w-0 truncate text-xs font-semibold text-ink">
+                Geri çekilsin mi?
               </p>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  className="min-h-11 rounded-full border border-slate-200 bg-white/72 px-4 text-sm font-semibold text-ink transition hover:bg-white"
-                  disabled={isActionLoading}
-                  onClick={() => setIsWithdrawConfirmVisible(false)}
-                  type="button"
-                >
-                  Vazgeç
-                </button>
-                <button
-                  className="min-h-11 rounded-full bg-road-blue px-4 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
-                  disabled={isActionLoading}
-                  onClick={() => onWithdraw(issue)}
-                  type="button"
-                >
-                  {loadingAction === "withdraw" ? "Geri çekiliyor..." : "Geri çek"}
-                </button>
-              </div>
+              <button
+                className="min-h-10 rounded-full border border-slate-200 bg-white/72 px-3 text-xs font-semibold text-ink transition hover:bg-white"
+                disabled={isActionLoading}
+                onClick={() => setIsWithdrawConfirmVisible(false)}
+                type="button"
+              >
+                Vazgeç
+              </button>
+              <button
+                className="min-h-10 rounded-full bg-road-blue px-3 text-xs font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={isActionLoading}
+                onClick={() => onWithdraw(issue)}
+                type="button"
+              >
+                {loadingAction === "withdraw" ? "Çekiliyor..." : "Geri çek"}
+              </button>
             </div>
           ) : (
             <button
@@ -261,7 +261,6 @@ export function IssueDetailContent({
         <AuthPrompt authStatus={authStatus} />
       ) : null}
 
-      <p className="text-xs text-ink-subtle">Yakındaysan durumu bildirebilirsin.</p>
     </div>
   );
 }
@@ -394,8 +393,8 @@ function ShareMenuButton({
 
 function MiniMetric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white/55 px-2.5 py-2">
-      <p className="text-[11px] font-semibold uppercase text-ink-subtle">
+    <div className="rounded-2xl border border-slate-200 bg-white/55 px-2.5 py-1.5">
+      <p className="text-[10px] font-semibold uppercase text-ink-subtle">
         {label}
       </p>
       <p className="mt-0.5 text-sm font-semibold text-ink">{value}</p>
@@ -405,6 +404,7 @@ function MiniMetric({ label, value }: { label: string; value: string }) {
 
 function ActionButton({
   action,
+  displayLabel,
   disabledReason,
   isActionLoading,
   issue,
@@ -412,6 +412,7 @@ function ActionButton({
   onAction,
 }: {
   action: { label: string; loadingLabel: string; value: IssueActionType };
+  displayLabel: string;
   disabledReason: string | null;
   isActionLoading: boolean;
   issue: PublicRoadIssue;
@@ -427,7 +428,7 @@ function ActionButton({
       onClick={() => onAction(action.value, issue)}
       type="button"
     >
-      {loadingAction === action.value ? action.loadingLabel : action.label}
+      {loadingAction === action.value ? action.loadingLabel : displayLabel}
     </button>
   );
 }
@@ -441,7 +442,7 @@ function FeedbackSlot({
     <div
       aria-live="polite"
       className={cn(
-        "flex h-7 items-center rounded-full border px-3 text-xs font-semibold",
+        "flex h-6 items-center rounded-full border px-3 text-[11px] font-semibold",
         feedback
           ? feedback.tone === "error"
             ? "border-red-200 bg-red-50/75 text-red-700"
@@ -541,6 +542,21 @@ function getDisabledReason(
   }
 
   return null;
+}
+
+function getActionDisplayLabel(
+  action: IssueActionType,
+  userState: IssueUserState | null,
+) {
+  if (action === "solved" && userState?.has_solved_report) {
+    return "Çözüldü geri al";
+  }
+
+  if (action === "false_report" && userState?.has_false_report) {
+    return "Yanlış bildirimi geri al";
+  }
+
+  return issueActions.find((item) => item.value === action)?.label ?? "";
 }
 
 function Badge({
