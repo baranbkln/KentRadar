@@ -1,6 +1,12 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Check, Copy, ExternalLink } from "lucide-react";
+import {
+  Camera,
+  Copy,
+  ExternalLink,
+  MessageCircle,
+  Share2,
+} from "lucide-react";
 import { MagicLinkForm } from "@/components/auth/magic-link-form";
 import {
   categoryLabels,
@@ -19,8 +25,10 @@ import {
   getIssueIntensityDescription,
 } from "@/lib/issues/issue-intensity";
 import {
+  getFacebookShareUrl,
   getIssuePublicUrl,
-  getIssueShareText,
+  getTwitterShareUrl,
+  getWhatsAppShareUrl,
 } from "@/lib/issues/issue-share";
 import { cn } from "@/lib/utils";
 
@@ -75,25 +83,7 @@ export function IssueDetailContent({
   const [isWithdrawConfirmVisible, setIsWithdrawConfirmVisible] =
     useState(false);
   const [shareFeedback, setShareFeedback] = useState<string | null>(null);
-
-  async function handleCopyShareLink() {
-    if (!navigator.clipboard) {
-      setShareFeedback("Kopyalanamadı.");
-      return;
-    }
-
-    try {
-      await navigator.clipboard.writeText(
-        `${getIssueShareText(issue)} ${getIssuePublicUrl(
-          issue.id,
-          window.location.origin,
-        )}`,
-      );
-      setShareFeedback("Kopyalandı.");
-    } catch {
-      setShareFeedback("Kopyalanamadı.");
-    }
-  }
+  const [isShareMenuOpen, setIsShareMenuOpen] = useState(false);
 
   return (
     <div className="space-y-3">
@@ -117,18 +107,27 @@ export function IssueDetailContent({
             Yoğunluk: {intensity.label}
           </p>
           <div className="flex flex-wrap gap-2">
-            <button
-              className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-full border border-slate-200 bg-white/80 px-3 text-xs font-semibold text-ink transition hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-road-blue"
-              onClick={handleCopyShareLink}
-              type="button"
-            >
-              {shareFeedback === "Kopyalandı." ? (
-                <Check className="size-3.5" />
-              ) : (
-                <Copy className="size-3.5" />
-              )}
-              Paylaş
-            </button>
+            <div className="relative">
+              <button
+                aria-expanded={isShareMenuOpen}
+                className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-full border border-slate-200 bg-white/80 px-3 text-xs font-semibold text-ink transition hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-road-blue"
+                onClick={() => {
+                  setIsShareMenuOpen((current) => !current);
+                  setShareFeedback(null);
+                }}
+                type="button"
+              >
+                <Share2 className="size-3.5" />
+                Paylaş
+              </button>
+              {isShareMenuOpen ? (
+                <IssueShareMenu
+                  issue={issue}
+                  onClose={() => setIsShareMenuOpen(false)}
+                  onFeedback={setShareFeedback}
+                />
+              ) : null}
+            </div>
             <Link
               className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-full border border-slate-200 bg-white/80 px-3 text-xs font-semibold text-ink transition hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-road-blue"
               href={`/i/${issue.id}`}
@@ -226,6 +225,132 @@ export function IssueDetailContent({
         Konuma yakınsan bu yol sorununu doğrulayabilir veya durumunu bildirebilirsin.
       </p>
     </div>
+  );
+}
+
+function IssueShareMenu({
+  issue,
+  onClose,
+  onFeedback,
+}: {
+  issue: PublicRoadIssue;
+  onClose: () => void;
+  onFeedback: (message: string) => void;
+}) {
+  const menuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    function handlePointerDown(event: PointerEvent) {
+      if (
+        menuRef.current &&
+        event.target instanceof Node &&
+        !menuRef.current.contains(event.target)
+      ) {
+        onClose();
+      }
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    }
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [onClose]);
+
+  function getPublicUrl() {
+    return getIssuePublicUrl(issue.id, window.location.origin);
+  }
+
+  function openShareUrl(url: string) {
+    window.open(url, "_blank", "noopener,noreferrer");
+    onClose();
+  }
+
+  async function copyToClipboard(message: string) {
+    if (!navigator.clipboard) {
+      onFeedback("Bağlantı kopyalanamadı.");
+      onClose();
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(getPublicUrl());
+      onFeedback(message);
+    } catch {
+      onFeedback("Bağlantı kopyalanamadı.");
+    }
+
+    onClose();
+  }
+
+  return (
+    <div
+      className="glass-panel absolute right-0 top-[calc(100%+8px)] z-[760] w-60 rounded-2xl p-1.5 shadow-xl"
+      ref={menuRef}
+      role="menu"
+    >
+      <ShareMenuButton
+        icon={<span className="text-sm font-black">X</span>}
+        label="X üzerinde paylaş"
+        onClick={() => openShareUrl(getTwitterShareUrl(issue, window.location.origin))}
+      />
+      <ShareMenuButton
+        icon={<Camera className="size-4" />}
+        label="Instagram'da paylaş"
+        onClick={() =>
+          copyToClipboard(
+            "Bağlantı kopyalandı. Instagram'da paylaşırken yapıştırabilirsin.",
+          )
+        }
+      />
+      <ShareMenuButton
+        icon={<span className="text-base font-black">f</span>}
+        label="Facebook'ta paylaş"
+        onClick={() => openShareUrl(getFacebookShareUrl(issue, window.location.origin))}
+      />
+      <ShareMenuButton
+        icon={<MessageCircle className="size-4" />}
+        label="WhatsApp ile paylaş"
+        onClick={() => openShareUrl(getWhatsAppShareUrl(issue, window.location.origin))}
+      />
+      <ShareMenuButton
+        icon={<Copy className="size-4" />}
+        label="Panoya kopyala"
+        onClick={() => copyToClipboard("Bağlantı kopyalandı.")}
+      />
+    </div>
+  );
+}
+
+function ShareMenuButton({
+  icon,
+  label,
+  onClick,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      className="flex min-h-11 w-full items-center gap-2 rounded-xl px-3 text-left text-sm font-semibold text-ink transition hover:bg-white/75 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-road-blue"
+      onClick={onClick}
+      role="menuitem"
+      type="button"
+    >
+      <span className="flex size-6 shrink-0 items-center justify-center text-ink-muted">
+        {icon}
+      </span>
+      {label}
+    </button>
   );
 }
 

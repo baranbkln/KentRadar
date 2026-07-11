@@ -8,7 +8,6 @@ import {
   LogOut,
   Plus,
 } from "lucide-react";
-import Link from "next/link";
 import { MagicLinkForm } from "@/components/auth/magic-link-form";
 import { ActiveFilterSummary } from "@/components/map/active-filter-summary";
 import { FilterSheet } from "@/components/map/filter-sheet";
@@ -23,6 +22,7 @@ type MapControlBarProps = {
   isFilterOpen: boolean;
   isIssueRankingButtonDisabled: boolean;
   isIssueRankingPreviewOpen: boolean;
+  isProfilePreviewOpen: boolean;
   locationMessage: string | null;
   totalCount: number;
   visibleCount: number;
@@ -34,6 +34,7 @@ type MapControlBarProps = {
   onToggleAuthPanel: () => void;
   onToggleFilters: () => void;
   onToggleIssueRankingPreview: () => void;
+  onToggleProfilePreview: () => void;
   onUseLocation: () => void;
 };
 
@@ -44,6 +45,7 @@ export function MapControlBar({
   isFilterOpen,
   isIssueRankingButtonDisabled,
   isIssueRankingPreviewOpen,
+  isProfilePreviewOpen,
   locationMessage,
   totalCount,
   visibleCount,
@@ -55,6 +57,7 @@ export function MapControlBar({
   onToggleAuthPanel,
   onToggleFilters,
   onToggleIssueRankingPreview,
+  onToggleProfilePreview,
   onUseLocation,
 }: MapControlBarProps) {
   return (
@@ -103,12 +106,14 @@ export function MapControlBar({
             </FloatingMapButton>
             {authStatus === "authenticated" ? (
               <div className="glass-panel hidden min-h-11 items-center gap-2 rounded-full px-3 text-sm font-semibold text-ink sm:inline-flex">
-                <Link
+                <button
+                  aria-expanded={isProfilePreviewOpen}
                   className="max-w-[150px] truncate rounded-full px-2 py-1 transition hover:bg-white/70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-road-blue"
-                  href="/profile"
+                  onClick={onToggleProfilePreview}
+                  type="button"
                 >
                   {shortenEmail(userEmail)}
-                </Link>
+                </button>
                 <button
                   className="inline-flex min-h-8 items-center gap-1 rounded-full px-2 text-xs font-semibold text-ink-muted transition hover:bg-white/70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-road-blue"
                   onClick={onSignOut}
@@ -130,14 +135,16 @@ export function MapControlBar({
             )}
             {authStatus === "authenticated" ? (
               <>
-                <Link
+                <button
+                  aria-expanded={isProfilePreviewOpen}
                   aria-label="Profilim"
                   className="glass-panel inline-flex min-h-11 min-w-11 items-center justify-center rounded-full px-3 text-sm font-semibold text-ink transition hover:bg-white/85 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-road-blue sm:hidden"
-                  href="/profile"
+                  onClick={onToggleProfilePreview}
                   title={shortenEmail(userEmail)}
+                  type="button"
                 >
                   {shortenEmail(userEmail).slice(0, 1)}
-                </Link>
+                </button>
                 <FloatingMapButton
                   aria-label="Çıkış yap"
                   className="sm:hidden"

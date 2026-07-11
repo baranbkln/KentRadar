@@ -47,6 +47,12 @@ export function getTwitterShareUrl(issue: ShareIssue, baseUrl?: string | null) {
   )}&url=${encodeURIComponent(getIssuePublicUrl(issue.id, baseUrl))}`;
 }
 
+export function getFacebookShareUrl(issue: ShareIssue, baseUrl?: string | null) {
+  return `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(
+    getIssuePublicUrl(issue.id, baseUrl),
+  )}`;
+}
+
 function normalizeBaseUrl(value: string | null | undefined) {
   if (!value) {
     return null;

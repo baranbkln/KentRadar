@@ -1,7 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { Info } from "lucide-react";
 import { MapContainer, TileLayer, useMap } from "react-leaflet";
 import type { Map as LeafletMap } from "leaflet";
 import { AppShell } from "@/components/layout/app-shell";
@@ -13,6 +15,7 @@ import { IssueSidePanel } from "@/components/map/issue-side-panel";
 import { MapAddClickHandler } from "@/components/map/map-add-click-handler";
 import { MapControlBar } from "@/components/map/map-control-bar";
 import { MapStatusOverlay } from "@/components/map/map-status-overlay";
+import { ProfilePreview } from "@/components/map/profile-preview";
 import { RoadIssueMarker } from "@/components/map/road-issue-marker";
 import { SelectedLocationMarker } from "@/components/map/selected-location-marker";
 import { useRoadIssues } from "@/hooks/use-road-issues";
@@ -70,6 +73,7 @@ export function RoadIssueMap() {
   const [isAuthPanelOpen, setIsAuthPanelOpen] = useState(false);
   const [isIssueRankingPreviewOpen, setIsIssueRankingPreviewOpen] =
     useState(false);
+  const [isProfilePreviewOpen, setIsProfilePreviewOpen] = useState(false);
   const [issueRankingPreviewType, setIssueRankingPreviewType] =
     useState<PublicIssueRankingType>("most_reported");
   const [addError, setAddError] = useState<string | null>(null);
@@ -244,6 +248,9 @@ export function RoadIssueMap() {
     setSelectedIssue(issue);
     setIssueActionFeedback(null);
     setIsIssueActionAuthPromptVisible(false);
+    setIsIssueRankingPreviewOpen(false);
+    setIsProfilePreviewOpen(false);
+    setIsFilterOpen(false);
     mapRef.current?.flyTo([issue.latitude, issue.longitude], 17, {
       duration: 0.6,
     });
@@ -267,6 +274,7 @@ export function RoadIssueMap() {
   function handleStartAddIssue() {
     setIsAddMode(true);
     setIsIssueRankingPreviewOpen(false);
+    setIsProfilePreviewOpen(false);
     setSelectedIssue(null);
     setIsFilterOpen(false);
     setAddError(null);
@@ -276,6 +284,7 @@ export function RoadIssueMap() {
 
   async function handleOpenIssueFromPreview(issueId: string) {
     setIsIssueRankingPreviewOpen(false);
+    setIsProfilePreviewOpen(false);
     setIssueActionFeedback(null);
     setIsIssueActionAuthPromptVisible(false);
     setLocationMessage(null);
@@ -339,6 +348,7 @@ export function RoadIssueMap() {
     setAuthStatus("unauthenticated");
     setUserEmail(null);
     setIssueUserState(null);
+    setIsProfilePreviewOpen(false);
     setIsAuthPanelOpen(true);
   }
 
@@ -651,6 +661,15 @@ export function RoadIssueMap() {
           ))}
         </MapContainer>
 
+        <Link
+          aria-label="Projenin Amacı"
+          className="glass-panel pointer-events-auto absolute left-3 top-[max(12px,env(safe-area-inset-top))] z-[705] inline-flex min-h-14 items-center gap-2 rounded-full px-3 text-sm font-semibold text-ink shadow-glass transition hover:bg-white/85 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-road-blue md:left-5 md:top-5"
+          href="/about"
+        >
+          <Info className="size-4" />
+          Amaç
+        </Link>
+
         <MapControlBar
           authStatus={authStatus}
           filters={filters}
@@ -658,6 +677,7 @@ export function RoadIssueMap() {
           isFilterOpen={isFilterOpen}
           isIssueRankingButtonDisabled={isAddMode}
           isIssueRankingPreviewOpen={isIssueRankingPreviewOpen}
+          isProfilePreviewOpen={isProfilePreviewOpen}
           locationMessage={locationMessage}
           onAddIssue={handleStartAddIssue}
           onFiltersChange={setFilters}
@@ -667,9 +687,17 @@ export function RoadIssueMap() {
           onToggleFilters={() => {
             setIsFilterOpen((current) => !current);
             setIsIssueRankingPreviewOpen(false);
+            setIsProfilePreviewOpen(false);
           }}
           onToggleIssueRankingPreview={() => {
             setIsIssueRankingPreviewOpen((current) => !current);
+            setIsFilterOpen(false);
+            setIsAuthPanelOpen(false);
+            setIsProfilePreviewOpen(false);
+          }}
+          onToggleProfilePreview={() => {
+            setIsProfilePreviewOpen((current) => !current);
+            setIsIssueRankingPreviewOpen(false);
             setIsFilterOpen(false);
             setIsAuthPanelOpen(false);
           }}
@@ -692,6 +720,14 @@ export function RoadIssueMap() {
             onClose={() => setIsIssueRankingPreviewOpen(false)}
             onIssueSelect={handleOpenIssueFromPreview}
             onRankingTypeChange={setIssueRankingPreviewType}
+          />
+        ) : null}
+
+        {isProfilePreviewOpen && authStatus === "authenticated" ? (
+          <ProfilePreview
+            onClose={() => setIsProfilePreviewOpen(false)}
+            onSignOut={handleSignOut}
+            userEmail={userEmail}
           />
         ) : null}
 
