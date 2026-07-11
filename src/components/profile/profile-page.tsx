@@ -708,11 +708,19 @@ function CivicScorePanel({
             Etki Puanı, YolDurumu’na yaptığın doğrulanabilir katkıları gösterir.
           </p>
         </div>
-        {isLoading ? (
-          <p className="text-sm font-semibold text-ink-muted">
-            Puan bilgileri güncelleniyor...
-          </p>
-        ) : null}
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          {isLoading ? (
+            <p className="text-sm font-semibold text-ink-muted">
+              Puan bilgileri güncelleniyor...
+            </p>
+          ) : null}
+          <Link
+            className="inline-flex min-h-10 items-center justify-center rounded-full border border-slate-200 bg-white/75 px-3 text-sm font-semibold text-ink transition hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-road-blue"
+            href="/leaderboard"
+          >
+            Katkıcı sıralamasını gör
+          </Link>
+        </div>
       </div>
 
       <div className="mt-4 grid gap-2 md:grid-cols-3">

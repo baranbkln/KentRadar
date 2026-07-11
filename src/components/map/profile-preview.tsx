@@ -109,13 +109,19 @@ export function ProfilePreview({
           </div>
         ) : null}
 
-        <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-[1fr_auto]">
+        <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
           <Link
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-road-blue px-4 text-sm font-semibold text-white transition hover:bg-blue-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-road-blue"
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-road-blue px-4 text-sm font-semibold text-white transition hover:bg-blue-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-road-blue sm:col-span-2"
             href="/profile"
           >
             Profilime git
             <ExternalLink className="size-4" />
+          </Link>
+          <Link
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-slate-200 bg-white/70 px-4 text-sm font-semibold text-ink transition hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-road-blue"
+            href="/leaderboard"
+          >
+            Sıralama
           </Link>
           <button
             className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-white/70 px-4 text-sm font-semibold text-ink transition hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-road-blue"
