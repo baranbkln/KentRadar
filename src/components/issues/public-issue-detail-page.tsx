@@ -1,6 +1,7 @@
-import { ArrowLeft, ExternalLink, ListFilter, MapPinned } from "lucide-react";
+import { ArrowLeft, ListFilter, MapPinned } from "lucide-react";
 import Link from "next/link";
 import { IssueShareActions } from "@/components/issues/issue-share-actions";
+import { IssueWatchButton } from "@/components/issues/issue-watch-button";
 import { AppShell } from "@/components/layout/app-shell";
 import { GlassPanel } from "@/components/map/glass-panel";
 import {
@@ -122,9 +123,15 @@ export function PublicIssueDetailPage({ issue }: PublicIssueDetailPageProps) {
                   href={`/?issue=${issue.id}`}
                 >
                   Haritada gör
-                  <ExternalLink className="size-4" />
+                  <MapPinned className="size-4" />
                 </Link>
               </GlassPanel>
+
+              <IssueWatchButton
+                initialWatcherCount={issue.watcher_count}
+                issueId={issue.id}
+                showDescription
+              />
 
               <IssueShareActions issue={issue} />
             </aside>

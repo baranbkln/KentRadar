@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   Camera,
@@ -8,6 +8,7 @@ import {
   Share2,
 } from "lucide-react";
 import { MagicLinkForm } from "@/components/auth/magic-link-form";
+import { IssueWatchButton } from "@/components/issues/issue-watch-button";
 import {
   categoryLabels,
   severityLabels,
@@ -82,13 +83,38 @@ export function IssueDetailContent({
   const intensity = calculateIssueIntensity(issue);
   const [isWithdrawConfirmVisible, setIsWithdrawConfirmVisible] =
     useState(false);
-  const [shareFeedback, setShareFeedback] = useState<string | null>(null);
   const [isShareMenuOpen, setIsShareMenuOpen] = useState(false);
+  const [localFeedback, setLocalFeedback] = useState<IssueActionFeedback | null>(
+    null,
+  );
+  const disabledHelper = getFirstDisabledReason(userState);
+  const visibleFeedback =
+    localFeedback ?? compactActionFeedback(actionFeedback) ?? disabledHelper;
+  const handleWatchFeedback = useCallback(
+    (message: string, tone: "error" | "success") => {
+      setLocalFeedback({
+        message,
+        tone,
+      });
+    },
+    [],
+  );
+
+  useEffect(() => {
+    if (actionFeedback) {
+      setLocalFeedback(null);
+    }
+  }, [actionFeedback]);
+
+  useEffect(() => {
+    setLocalFeedback(null);
+    setIsShareMenuOpen(false);
+  }, [issue.id]);
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2.5">
       <div>
-        <div className="mb-2 flex flex-wrap items-center gap-2">
+        <div className="mb-2 flex flex-wrap items-center gap-1.5">
           <Badge>{categoryLabels[issue.category]}</Badge>
           <Badge muted>{severityLabels[issue.severity]}</Badge>
           <Badge muted>{statusLabels[issue.status]}</Badge>
@@ -99,13 +125,14 @@ export function IssueDetailContent({
         <h2 className="text-xl font-semibold leading-tight text-ink">
           {categoryLabels[issue.category]}
         </h2>
+        <p className="mt-1 text-xs font-semibold text-ink-subtle">
+          {daysOpen(issue.first_reported_at)} gündür açık görünüyor
+        </p>
       </div>
 
-      <div className="rounded-2xl border border-slate-200 bg-white/62 p-3">
+      <div className="rounded-2xl border border-slate-200 bg-white/62 p-2.5">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="text-sm font-semibold text-ink">
-            Yoğunluk: {intensity.label}
-          </p>
+          <p className="text-xs font-semibold text-ink">{intensity.label}</p>
           <div className="flex flex-wrap gap-2">
             <div className="relative">
               <button
@@ -113,7 +140,7 @@ export function IssueDetailContent({
                 className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-full border border-slate-200 bg-white/80 px-3 text-xs font-semibold text-ink transition hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-road-blue"
                 onClick={() => {
                   setIsShareMenuOpen((current) => !current);
-                  setShareFeedback(null);
+                  setLocalFeedback(null);
                 }}
                 type="button"
               >
@@ -124,7 +151,15 @@ export function IssueDetailContent({
                 <IssueShareMenu
                   issue={issue}
                   onClose={() => setIsShareMenuOpen(false)}
-                  onFeedback={setShareFeedback}
+                  onFeedback={(message) => {
+                    setLocalFeedback({
+                      message:
+                        message.length > 42
+                          ? "Bağlantı kopyalandı."
+                          : message,
+                      tone: "success",
+                    });
+                  }}
                 />
               ) : null}
             </div>
@@ -137,17 +172,22 @@ export function IssueDetailContent({
             </Link>
           </div>
         </div>
-        <p className="mt-1 text-xs leading-5 text-ink-muted">
+        <p className="mt-1 text-xs leading-4 text-ink-muted">
           {getIssueIntensityDescription(issue)}
         </p>
-        {shareFeedback ? (
-          <p className="mt-2 text-xs font-semibold text-emerald-700">
-            {shareFeedback}
-          </p>
-        ) : null}
       </div>
 
-      <div className="grid grid-cols-2 gap-2 text-sm">
+      <IssueWatchButton
+        compact
+        hideInlineMessages
+        initialWatcherCount={issue.watcher_count}
+        issueId={issue.id}
+        onFeedback={handleWatchFeedback}
+      />
+
+      <FeedbackSlot feedback={visibleFeedback} />
+
+      <div className="grid grid-cols-2 gap-1.5 text-sm">
         <MiniMetric
           label="Açık süre"
           value={`${daysOpen(issue.first_reported_at)} gün`}
@@ -160,7 +200,7 @@ export function IssueDetailContent({
         Son doğrulama: {formatLastVerified(issue.last_verified_at)}
       </p>
 
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+      <div className="grid grid-cols-2 gap-1.5">
         {issueActions.map((action) => (
           <ActionButton
             action={action}
@@ -175,7 +215,7 @@ export function IssueDetailContent({
       </div>
 
       {userState?.has_active_report ? (
-        <div className="rounded-2xl border border-slate-200 bg-white/62 p-3">
+        <div className="rounded-2xl border border-slate-200 bg-white/62 p-2.5">
           {isWithdrawConfirmVisible ? (
             <div className="space-y-2">
               <p className="text-sm font-semibold text-ink">
@@ -214,16 +254,14 @@ export function IssueDetailContent({
       ) : null}
 
       {actionFeedback ? (
-        <Alert tone={actionFeedback.tone}>{actionFeedback.message}</Alert>
+        <span className="sr-only">{actionFeedback.message}</span>
       ) : null}
 
       {isAuthPromptVisible && authStatus !== "authenticated" ? (
         <AuthPrompt authStatus={authStatus} />
       ) : null}
 
-      <p className="text-xs text-ink-subtle">
-        Konuma yakınsan bu yol sorununu doğrulayabilir veya durumunu bildirebilirsin.
-      </p>
+      <p className="text-xs text-ink-subtle">Yakındaysan durumu bildirebilirsin.</p>
     </div>
   );
 }
@@ -293,18 +331,18 @@ function IssueShareMenu({
 
   return (
     <div
-      className="glass-panel absolute right-0 top-[calc(100%+8px)] z-[760] w-60 rounded-2xl p-1.5 shadow-xl"
+      className="glass-panel absolute right-3 top-[calc(100%+8px)] z-[760] w-60 rounded-2xl p-2 shadow-xl"
       ref={menuRef}
       role="menu"
     >
       <ShareMenuButton
         icon={<span className="text-sm font-black">X</span>}
-        label="X üzerinde paylaş"
+        label="X'te paylaş"
         onClick={() => openShareUrl(getTwitterShareUrl(issue, window.location.origin))}
       />
       <ShareMenuButton
         icon={<Camera className="size-4" />}
-        label="Instagram'da paylaş"
+        label="Instagram için linki kopyala"
         onClick={() =>
           copyToClipboard(
             "Bağlantı kopyalandı. Instagram'da paylaşırken yapıştırabilirsin.",
@@ -341,7 +379,7 @@ function ShareMenuButton({
 }) {
   return (
     <button
-      className="flex min-h-11 w-full items-center gap-2 rounded-xl px-3 text-left text-sm font-semibold text-ink transition hover:bg-white/75 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-road-blue"
+      className="flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-left text-sm font-medium text-ink transition hover:bg-white/75 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-road-blue"
       onClick={onClick}
       role="menuitem"
       type="button"
@@ -356,7 +394,7 @@ function ShareMenuButton({
 
 function MiniMetric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white/55 px-3 py-2">
+    <div className="rounded-2xl border border-slate-200 bg-white/55 px-2.5 py-2">
       <p className="text-[11px] font-semibold uppercase text-ink-subtle">
         {label}
       </p>
@@ -383,22 +421,105 @@ function ActionButton({
   const isDisabled = isActionLoading || Boolean(disabledReason);
 
   return (
-    <div>
-      <button
-        className="min-h-11 w-full rounded-2xl border border-slate-200 bg-white/72 px-3 text-sm font-semibold text-ink transition hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-road-blue disabled:cursor-not-allowed disabled:opacity-60"
-        disabled={isDisabled}
-        onClick={() => onAction(action.value, issue)}
-        type="button"
-      >
-        {loadingAction === action.value ? action.loadingLabel : action.label}
-      </button>
-      {disabledReason ? (
-        <p className="mt-1 px-1 text-xs leading-4 text-ink-subtle">
-          {disabledReason}
-        </p>
-      ) : null}
+    <button
+      className="min-h-11 w-full rounded-2xl border border-slate-200 bg-white/72 px-2.5 text-sm font-semibold text-ink transition hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-road-blue disabled:cursor-not-allowed disabled:opacity-60"
+      disabled={isDisabled}
+      onClick={() => onAction(action.value, issue)}
+      type="button"
+    >
+      {loadingAction === action.value ? action.loadingLabel : action.label}
+    </button>
+  );
+}
+
+function FeedbackSlot({
+  feedback,
+}: {
+  feedback: IssueActionFeedback | null;
+}) {
+  return (
+    <div
+      aria-live="polite"
+      className={cn(
+        "flex h-7 items-center rounded-full border px-3 text-xs font-semibold",
+        feedback
+          ? feedback.tone === "error"
+            ? "border-red-200 bg-red-50/75 text-red-700"
+            : "border-emerald-200 bg-emerald-50/75 text-emerald-700"
+          : "border-transparent bg-transparent text-transparent",
+      )}
+    >
+      <span className="truncate">{feedback?.message ?? "Durum"}</span>
     </div>
   );
+}
+
+function compactActionFeedback(
+  feedback: IssueActionFeedback | null,
+): IssueActionFeedback | null {
+  if (!feedback) {
+    return null;
+  }
+
+  if (feedback.tone === "success") {
+    return {
+      message: "İşlem tamamlandı.",
+      tone: "success",
+    };
+  }
+
+  if (feedback.message.includes("yaklaşık 500 metre")) {
+    return {
+      message: "Konuma yakın olmalısın.",
+      tone: "error",
+    };
+  }
+
+  if (feedback.message.includes("zaten bildirdin")) {
+    return {
+      message: "Zaten bildirdin.",
+      tone: "error",
+    };
+  }
+
+  if (feedback.message.includes("hasarını zaten")) {
+    return {
+      message: "Hasarı bildirdin.",
+      tone: "error",
+    };
+  }
+
+  return {
+    message: feedback.message.length > 28 ? "İşlem yapılamadı." : feedback.message,
+    tone: "error",
+  };
+}
+
+function getFirstDisabledReason(
+  userState: IssueUserState | null,
+): IssueActionFeedback | null {
+  if (userState?.has_active_report) {
+    return {
+      message: "Zaten bildirdin.",
+      tone: "error",
+    };
+  }
+
+  if (userState?.has_damage_report) {
+    return {
+      message: "Hasarı bildirdin.",
+      tone: "error",
+    };
+  }
+
+  if (userState?.has_verified) {
+    return {
+      message: "Yakın zamanda doğruladın.",
+      tone: "error",
+    };
+  }
+
+  return null;
 }
 
 function getDisabledReason(
@@ -407,16 +528,16 @@ function getDisabledReason(
 ) {
   if (action === "verify") {
     if (userState?.has_active_report) {
-      return "Bu sorunu zaten bildirdin.";
+      return "Zaten bildirdin.";
     }
 
     if (userState?.has_verified) {
-      return "Bu yol sorununu yakın zamanda doğruladın.";
+      return "Yakın zamanda doğruladın.";
     }
   }
 
   if (action === "damage" && userState?.has_damage_report) {
-    return "Bu yol sorunu için araç hasarını zaten bildirdin.";
+    return "Hasarı bildirdin.";
   }
 
   return null;

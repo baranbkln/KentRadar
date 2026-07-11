@@ -8,7 +8,9 @@ create index if not exists road_issues_city_district_idx
   on public.road_issues (city, district)
   where reporter_count > 0;
 
-create or replace view public.road_issue_public_stats
+drop view if exists public.road_issue_public_stats;
+
+create view public.road_issue_public_stats
 with (security_invoker = true)
 as
 select

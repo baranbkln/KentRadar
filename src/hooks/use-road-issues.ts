@@ -16,7 +16,7 @@ type UseRoadIssuesResult = {
 };
 
 const ROAD_ISSUE_COLUMNS =
-  "id, latitude, longitude, city, district, neighborhood, location_label, category, severity, status, first_reported_at, last_verified_at, verification_count, damage_count, solved_count, false_report_count, reporter_count, severity_score_avg, created_at, updated_at";
+  "id, latitude, longitude, city, district, neighborhood, location_label, category, severity, status, first_reported_at, last_verified_at, verification_count, damage_count, solved_count, false_report_count, reporter_count, watcher_count, severity_score_avg, created_at, updated_at";
 const FALLBACK_ROAD_ISSUE_COLUMNS =
   "id, latitude, longitude, category, severity, status, first_reported_at, last_verified_at, verification_count, damage_count, solved_count, false_report_count, reporter_count, severity_score_avg, created_at, updated_at";
 
@@ -111,6 +111,8 @@ function withLocationFallback(issue: Record<string, unknown>) {
       typeof issue.location_label === "string" ? issue.location_label : null,
     neighborhood:
       typeof issue.neighborhood === "string" ? issue.neighborhood : null,
+    watcher_count:
+      typeof issue.watcher_count === "number" ? issue.watcher_count : 0,
   };
 }
 
@@ -119,6 +121,7 @@ function isMissingLocationColumnError(message: string) {
     message.includes("city") ||
     message.includes("district") ||
     message.includes("neighborhood") ||
-    message.includes("location_label")
+    message.includes("location_label") ||
+    message.includes("watcher_count")
   );
 }

@@ -22,6 +22,7 @@ export type PublicRoadIssue = {
   solved_count: number;
   false_report_count: number;
   reporter_count: number;
+  watcher_count: number;
   severity_score_avg: number;
   created_at: string;
   updated_at: string;
@@ -114,5 +115,32 @@ export type ProfileEntry = {
   solved_count: number;
   false_report_count: number;
   open_days: number;
+  issue_is_public: boolean;
+};
+
+export type IssueWatchState = {
+  issue_id: string;
+  is_watching: boolean;
+  notification_enabled: boolean;
+  watcher_count: number;
+};
+
+export type ProfileWatchedIssue = {
+  issue_id: string;
+  category: RoadIssueCategory;
+  severity: RoadIssueSeverity;
+  status: RoadIssueStatus;
+  latitude: number;
+  longitude: number;
+  first_reported_at: string;
+  last_verified_at: string | null;
+  reporter_count: number;
+  verification_count: number;
+  damage_count: number;
+  solved_count: number;
+  false_report_count: number;
+  watcher_count: number;
+  open_days: number;
+  watched_at: string;
   issue_is_public: boolean;
 };

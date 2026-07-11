@@ -34,9 +34,9 @@ export function IssueSidePanel({
   userState,
 }: IssueSidePanelProps) {
   return (
-    <div className="pointer-events-none absolute right-5 top-28 z-[750] hidden w-[360px] md:block">
+    <div className="pointer-events-none absolute right-6 top-28 z-[750] hidden w-[390px] md:block">
       <GlassPanel className="pointer-events-auto p-3.5">
-        <div className="mb-2 flex justify-end">
+        <div className="mb-1 flex justify-end">
           <button
             aria-label="Detayı kapat"
             className="flex size-11 items-center justify-center rounded-full bg-white/70 text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-road-blue"

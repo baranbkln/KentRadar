@@ -30,15 +30,15 @@ export function FilterSheet({ filters, onApply, onClose }: FilterSheetProps) {
   }, [filters]);
 
   return (
-    <div className="pointer-events-none fixed inset-0 z-[740] md:absolute md:inset-auto md:right-0 md:top-[76px] md:w-[380px]">
+    <div className="pointer-events-none fixed inset-0 z-[740] md:fixed md:inset-auto md:bottom-5 md:right-5 md:top-28 md:w-[360px]">
       <button
         aria-label="Kapat"
         className="absolute inset-0 h-full w-full cursor-default bg-transparent md:hidden"
         onClick={onClose}
         type="button"
       />
-      <div className="absolute inset-x-3 bottom-3 rounded-[28px] md:inset-x-auto md:bottom-auto md:right-0 md:top-0 md:w-full">
-        <div className="glass-panel pointer-events-auto p-3.5 md:p-4">
+      <div className="absolute inset-x-3 bottom-3 rounded-[28px] md:inset-0 md:w-full">
+        <div className="glass-panel pointer-events-auto p-3 md:p-3.5">
           <div className="mb-3 flex items-center justify-between gap-3">
             <h2 className="text-base font-semibold text-ink">Filtreler</h2>
             <button
@@ -51,7 +51,7 @@ export function FilterSheet({ filters, onApply, onClose }: FilterSheetProps) {
             </button>
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             <CategoryFilterGroup
               label="Kategori"
               selectedCategories={draftFilters.categories}
@@ -84,7 +84,7 @@ export function FilterSheet({ filters, onApply, onClose }: FilterSheetProps) {
 
           <div className="mt-3 grid grid-cols-2 gap-2">
             <button
-              className="min-h-11 rounded-full border border-slate-200 bg-white/72 px-4 text-sm font-semibold text-ink transition hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-road-blue"
+              className="min-h-11 rounded-full border border-slate-200 bg-white/72 px-4 text-sm font-semibold text-ink-muted transition hover:bg-white hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-road-blue"
               onClick={() => setDraftFilters(emptyFilters)}
               type="button"
             >
@@ -141,7 +141,7 @@ function FilterOptionGroup({
             <button
               aria-pressed={isActive}
               className={cn(
-                "flex min-h-[42px] items-center justify-between gap-1.5 rounded-xl border px-2.5 py-1.5 text-left text-[12px] font-semibold leading-tight transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-road-blue",
+                "flex min-h-10 items-center justify-between gap-1.5 rounded-full border px-2.5 py-1 text-left text-[11px] font-semibold leading-tight transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-road-blue",
                 isActive
                   ? "border-road-blue bg-white text-ink shadow-sm"
                   : "border-slate-200 bg-white/62 text-ink-muted hover:bg-white",
@@ -216,7 +216,7 @@ function FilterChoiceButton({
     <button
       aria-pressed={isActive}
       className={cn(
-        "flex min-h-[42px] items-center justify-between gap-1.5 rounded-xl border px-2.5 py-1.5 text-left text-[12px] font-semibold leading-tight transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-road-blue",
+        "flex min-h-10 items-center justify-between gap-1.5 rounded-full border px-2.5 py-1 text-left text-[11px] font-semibold leading-tight transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-road-blue",
         isActive
           ? "border-road-blue bg-white text-ink shadow-sm"
           : "border-slate-200 bg-white/62 text-ink-muted hover:bg-white",

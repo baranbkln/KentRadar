@@ -38,9 +38,9 @@ export function IssueRankingPreview({
   const previewIssues = rankings.slice(0, 5);
 
   return (
-    <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[715] p-3 pb-[max(12px,env(safe-area-inset-bottom))] md:bottom-auto md:left-auto md:right-5 md:top-28 md:w-[390px] md:p-0">
-      <GlassPanel className="pointer-events-auto max-h-[58dvh] overflow-hidden p-3.5 md:max-h-[calc(100dvh-8rem)] md:p-4">
-        <div className="mb-3 flex items-start justify-between gap-3">
+    <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[715] p-3 pb-[max(12px,env(safe-area-inset-bottom))] md:bottom-5 md:left-auto md:right-5 md:top-28 md:w-[370px] md:p-0">
+      <GlassPanel className="pointer-events-auto flex h-full flex-col overflow-hidden p-3 md:p-3.5">
+        <div className="mb-2.5 flex items-start justify-between gap-3">
           <div className="flex min-w-0 items-start gap-2">
             <button
               aria-label="Haritaya geri dön"
@@ -52,7 +52,7 @@ export function IssueRankingPreview({
             </button>
             <div className="min-w-0">
               <h2 className="text-base font-semibold text-ink">Sorun Listesi</h2>
-              <p className="mt-1 text-sm text-ink-muted">
+              <p className="mt-0.5 text-xs text-ink-muted">
                 Öne çıkan yol sorunları
               </p>
             </div>
@@ -69,7 +69,7 @@ export function IssueRankingPreview({
 
         <div
           aria-label="Öne çıkan yol sorunu sıralaması"
-          className="mb-3 grid grid-cols-2 gap-1.5"
+          className="mb-2.5 grid grid-cols-2 gap-1.5"
           role="tablist"
         >
           {issueRankingTabs.map((tab) => {
@@ -79,7 +79,7 @@ export function IssueRankingPreview({
               <button
                 aria-selected={isSelected}
                 className={cn(
-                  "flex min-h-[42px] items-center justify-between gap-1.5 rounded-xl border px-2.5 py-1.5 text-left text-[11px] font-semibold leading-tight transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-road-blue",
+                  "flex min-h-9 items-center justify-between gap-1.5 rounded-full border px-2.5 py-1 text-left text-[10px] font-semibold leading-tight transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-road-blue",
                   isSelected
                     ? "border-road-blue bg-white text-ink shadow-sm"
                     : "border-slate-200 bg-white/55 text-ink-muted hover:bg-white",
@@ -101,7 +101,7 @@ export function IssueRankingPreview({
           })}
         </div>
 
-        <div className="max-h-[30dvh] space-y-2 overflow-y-auto pr-1 md:max-h-[48dvh]">
+        <div className="min-h-0 flex-1 space-y-1.5 overflow-y-auto pr-1">
           {isLoading ? (
             <p className="rounded-2xl border border-slate-200 bg-white/62 px-3 py-3 text-sm text-ink-muted">
               Yol sorunları yükleniyor...
@@ -133,7 +133,7 @@ export function IssueRankingPreview({
         </div>
 
         <Link
-          className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-road-blue px-4 text-sm font-semibold text-white transition hover:bg-blue-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-road-blue"
+          className="mt-2.5 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-road-blue px-4 text-sm font-semibold text-white transition hover:bg-blue-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-road-blue"
           href={`/issues?tab=${rankingType}`}
         >
           Tümünü gör
@@ -159,7 +159,7 @@ function PreviewIssueItem({
     <button
       aria-label={`${categoryLabels[issue.category]} haritada göster`}
       className={cn(
-        "w-full rounded-2xl border border-slate-200 bg-white/62 p-3 text-left transition hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-road-blue",
+        "w-full rounded-2xl border border-slate-200 bg-white/62 p-2.5 text-left transition hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-road-blue",
         index >= 3 ? "hidden sm:block" : "",
       )}
       onClick={() => onIssueSelect(issue.id)}
@@ -167,10 +167,10 @@ function PreviewIssueItem({
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="font-semibold leading-tight text-ink">
+          <p className="text-lg font-semibold leading-tight text-ink">
             {categoryLabels[issue.category]}
           </p>
-          <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          <div className="mt-1.5 flex flex-wrap items-center gap-1">
             <Badge>{severityLabels[issue.severity]}</Badge>
             <Badge muted>{statusLabels[issue.status]}</Badge>
             <IntensityBadge level={intensity.level}>
@@ -178,11 +178,11 @@ function PreviewIssueItem({
             </IntensityBadge>
           </div>
         </div>
-        <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-white/72 text-xs font-semibold text-ink-muted">
+        <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-white/72 text-xs font-semibold text-ink-muted">
           {index + 1}
         </span>
       </div>
-      <p className="mt-3 text-sm leading-5 text-ink-muted">
+      <p className="mt-2 text-xs leading-5 text-ink-muted">
         {issue.reporter_count} bildirim · {issue.verification_count} doğrulama ·{" "}
         {issue.damage_count} hasar
       </p>

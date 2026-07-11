@@ -3,7 +3,7 @@ import { calculateOpenDays } from "@/lib/issues/issue-intensity";
 import type { PublicIssueRankingRow } from "@/lib/road-issues/types";
 
 const ISSUE_COLUMNS =
-  "id, latitude, longitude, city, district, neighborhood, location_label, category, severity, status, first_reported_at, last_verified_at, verification_count, damage_count, solved_count, false_report_count, reporter_count, severity_score_avg, created_at, updated_at";
+  "id, latitude, longitude, city, district, neighborhood, location_label, category, severity, status, first_reported_at, last_verified_at, verification_count, damage_count, solved_count, false_report_count, reporter_count, watcher_count, severity_score_avg, created_at, updated_at";
 const FALLBACK_ISSUE_COLUMNS =
   "id, latitude, longitude, category, severity, status, first_reported_at, last_verified_at, verification_count, damage_count, solved_count, false_report_count, reporter_count, severity_score_avg, created_at, updated_at";
 
@@ -72,6 +72,7 @@ function toPublicIssueDetail(row: Record<string, unknown>): PublicIssueRankingRo
     status: row.status as PublicIssueRankingRow["status"],
     updated_at: stringField(row.updated_at),
     verification_count: numberField(row.verification_count),
+    watcher_count: numberField(row.watcher_count),
   };
 }
 
@@ -92,6 +93,7 @@ function isMissingLocationColumnError(message: string) {
     message.includes("city") ||
     message.includes("district") ||
     message.includes("neighborhood") ||
-    message.includes("location_label")
+    message.includes("location_label") ||
+    message.includes("watcher_count")
   );
 }

@@ -1,9 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Info } from "lucide-react";
 import { MapContainer, TileLayer, useMap } from "react-leaflet";
 import type { Map as LeafletMap } from "leaflet";
 import { AppShell } from "@/components/layout/app-shell";
@@ -265,7 +263,7 @@ export function RoadIssueMap() {
 
       setCurrentLocation(location);
       mapRef.current?.flyTo(center, 17, { duration: 0.8 });
-      setLocationMessage("Mevcut konumun haritada gösteriliyor.");
+      setLocationMessage("Konumun gösteriliyor.");
     } catch (locationError) {
       setLocationMessage(getLocationErrorMessage(locationError));
     }
@@ -620,6 +618,56 @@ export function RoadIssueMap() {
     setLocationMessage("Bildirimin geri çekildi.");
   }
 
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key !== "Escape") {
+        return;
+      }
+
+      if (selectedIssue) {
+        setSelectedIssue(null);
+        return;
+      }
+
+      if (isAddMode) {
+        handleCancelAddIssue();
+        return;
+      }
+
+      if (isProfilePreviewOpen) {
+        setIsProfilePreviewOpen(false);
+        return;
+      }
+
+      if (isIssueRankingPreviewOpen) {
+        setIsIssueRankingPreviewOpen(false);
+        return;
+      }
+
+      if (isFilterOpen) {
+        setIsFilterOpen(false);
+        return;
+      }
+
+      if (isAuthPanelOpen) {
+        setIsAuthPanelOpen(false);
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [
+    isAddMode,
+    isAuthPanelOpen,
+    isFilterOpen,
+    isIssueRankingPreviewOpen,
+    isProfilePreviewOpen,
+    selectedIssue,
+  ]);
+
   return (
     <AppShell>
       <main className="relative h-dvh overflow-hidden bg-surface text-ink">
@@ -661,15 +709,6 @@ export function RoadIssueMap() {
           ))}
         </MapContainer>
 
-        <Link
-          aria-label="Projenin Amacı"
-          className="glass-panel pointer-events-auto absolute left-3 top-[max(12px,env(safe-area-inset-top))] z-[705] inline-flex min-h-14 items-center gap-2 rounded-full px-3 text-sm font-semibold text-ink shadow-glass transition hover:bg-white/85 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-road-blue md:left-5 md:top-5"
-          href="/about"
-        >
-          <Info className="size-4" />
-          Amaç
-        </Link>
-
         <MapControlBar
           authStatus={authStatus}
           filters={filters}
@@ -683,23 +722,36 @@ export function RoadIssueMap() {
           onFiltersChange={setFilters}
           onFilterClose={() => setIsFilterOpen(false)}
           onSignOut={handleSignOut}
-          onToggleAuthPanel={() => setIsAuthPanelOpen((current) => !current)}
+          onToggleAuthPanel={() => {
+            setIsAuthPanelOpen((current) => !current);
+            setIsFilterOpen(false);
+            setIsIssueRankingPreviewOpen(false);
+            setIsProfilePreviewOpen(false);
+            setSelectedIssue(null);
+            handleCancelAddIssue();
+          }}
           onToggleFilters={() => {
             setIsFilterOpen((current) => !current);
             setIsIssueRankingPreviewOpen(false);
             setIsProfilePreviewOpen(false);
+            setSelectedIssue(null);
+            handleCancelAddIssue();
           }}
           onToggleIssueRankingPreview={() => {
             setIsIssueRankingPreviewOpen((current) => !current);
             setIsFilterOpen(false);
             setIsAuthPanelOpen(false);
             setIsProfilePreviewOpen(false);
+            setSelectedIssue(null);
+            handleCancelAddIssue();
           }}
           onToggleProfilePreview={() => {
             setIsProfilePreviewOpen((current) => !current);
             setIsIssueRankingPreviewOpen(false);
             setIsFilterOpen(false);
             setIsAuthPanelOpen(false);
+            setSelectedIssue(null);
+            handleCancelAddIssue();
           }}
           onUseLocation={handleUseLocation}
           totalCount={issues.length}

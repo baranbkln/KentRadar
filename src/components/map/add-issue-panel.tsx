@@ -47,14 +47,14 @@ export function AddIssuePanel({
 }: AddIssuePanelProps) {
   return (
     <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[730] p-3 pb-[max(12px,env(safe-area-inset-bottom))] md:inset-x-auto md:bottom-5 md:left-5 md:top-28 md:w-[390px]">
-      <GlassPanel className="pointer-events-auto max-h-[72dvh] overflow-y-auto p-3.5 md:max-h-full md:p-4">
-        <div className="mb-3 flex items-start justify-between gap-3">
+      <GlassPanel className="pointer-events-auto p-3 md:p-3.5">
+        <div className="mb-2.5 flex items-start justify-between gap-3">
           <div>
             <h2 className="text-base font-semibold text-ink">
               Yol sorunu bildir
             </h2>
-            <p className="mt-1 text-sm leading-5 text-ink-muted">
-              Haritadan konum seç. Bir sorun türü ve önem seviyesi seç.
+            <p className="mt-0.5 text-xs leading-4 text-ink-muted">
+              Haritadan konum, sorun türü ve önem seviyesi seç.
             </p>
           </div>
           <button
@@ -73,18 +73,18 @@ export function AddIssuePanel({
             onCancel={onCancel}
           />
         ) : (
-          <div className="space-y-3">
-            <div className="rounded-2xl border border-slate-200 bg-white/62 p-3">
+          <div className="space-y-2">
+            <div className="rounded-2xl border border-slate-200 bg-white/62 p-2.5">
               <p className="text-[11px] font-semibold uppercase text-ink-subtle">
                 Seçilen konum
               </p>
-              <p className="mt-1 text-sm font-semibold text-ink">
+              <p className="mt-0.5 truncate text-sm font-semibold text-ink">
                 {selectedLocation
                   ? `${selectedLocation.latitude.toFixed(5)}, ${selectedLocation.longitude.toFixed(5)}`
                   : "Henüz konum seçilmedi"}
               </p>
               <button
-                className="mt-3 inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-slate-200 bg-white/80 px-3 text-sm font-semibold text-ink transition hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-road-blue"
+                className="mt-2 inline-flex min-h-10 items-center justify-center gap-2 rounded-full border border-slate-200 bg-white/80 px-3 text-sm font-semibold text-ink transition hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-road-blue"
                 onClick={onUseCurrentLocation}
                 type="button"
               >
@@ -106,18 +106,17 @@ export function AddIssuePanel({
               onChange={(value) => onSeverityChange(value as RoadIssueSeverity)}
             />
 
-            <label className="flex min-h-11 items-start gap-3 rounded-2xl border border-slate-200 bg-white/62 p-3 text-sm text-ink">
+            <label className="flex min-h-11 items-center gap-3 rounded-2xl border border-slate-200 bg-white/62 p-2.5 text-sm text-ink">
               <input
                 checked={hasDamage}
-                className="mt-1 size-4 accent-road-blue"
+                className="size-4 accent-road-blue"
                 onChange={(event) => onDamageChange(event.target.checked)}
                 type="checkbox"
               />
               <span>
                 <span className="block font-semibold">Araç hasarı yaşadım</span>
-                <span className="mt-1 block text-xs leading-5 text-ink-muted">
-                  Hasar bildirimi yalnızca sayı olarak tutulur; açıklama veya
-                  tazminat süreci içermez.
+                <span className="mt-0.5 block text-xs leading-4 text-ink-muted">
+                  Yalnızca sayı olarak tutulur.
                 </span>
               </span>
             </label>
@@ -125,7 +124,7 @@ export function AddIssuePanel({
             {error ? <Alert tone="error">{error}</Alert> : null}
             {success ? <Alert tone="success">{success}</Alert> : null}
 
-            <div className="grid grid-cols-2 gap-2 pt-1">
+            <div className="grid grid-cols-2 gap-2">
               <button
                 className="min-h-11 rounded-full border border-slate-200 bg-white/72 px-4 text-sm font-semibold text-ink transition hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-road-blue"
                 onClick={onCancel}
@@ -170,7 +169,7 @@ function OptionGroup({ label, options, value, onChange }: OptionGroupProps) {
             <button
               aria-pressed={isSelected}
               className={cn(
-                "flex min-h-[42px] items-center justify-between gap-1.5 rounded-xl border px-2.5 py-1.5 text-left text-[12px] font-semibold leading-tight transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-road-blue",
+                "flex min-h-9 items-center justify-between gap-1.5 rounded-xl border px-2.5 py-1 text-left text-[11px] font-semibold leading-tight transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-road-blue",
                 isSelected
                   ? "border-road-blue bg-white text-ink shadow-sm"
                   : "border-slate-200 bg-white/62 text-ink-muted hover:bg-white",

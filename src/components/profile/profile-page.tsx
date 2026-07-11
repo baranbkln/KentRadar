@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, ExternalLink, LogOut } from "lucide-react";
+import { ArrowLeft, ExternalLink, LogOut, MapPin } from "lucide-react";
 import { MagicLinkForm } from "@/components/auth/magic-link-form";
 import { AppShell } from "@/components/layout/app-shell";
 import { GlassPanel } from "@/components/map/glass-panel";
@@ -15,11 +15,16 @@ import {
   calculateIssueIntensity,
   getIssueIntensityClassName,
 } from "@/lib/issues/issue-intensity";
-import type { ProfileEntry, ProfileSummary } from "@/lib/road-issues/types";
+import type {
+  ProfileEntry,
+  ProfileSummary,
+  ProfileWatchedIssue,
+} from "@/lib/road-issues/types";
 import { createOptionalClient } from "@/lib/supabase/browser";
 import { cn } from "@/lib/utils";
 
 type AuthStatus = "loading" | "authenticated" | "unauthenticated" | "unconfigured";
+type ProfileTab = "active" | "damage" | "verified" | "watching" | "withdrawn" | "solved";
 
 type UserReportRow = {
   issue_id: string;
@@ -71,12 +76,17 @@ export function ProfilePage() {
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [summary, setSummary] = useState<ProfileSummary>(emptySummary);
   const [entries, setEntries] = useState<ProfileEntry[]>([]);
+  const [watchedIssues, setWatchedIssues] = useState<ProfileWatchedIssue[]>([]);
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [withdrawingIssueId, setWithdrawingIssueId] = useState<string | null>(
     null,
   );
+  const [unwatchingIssueId, setUnwatchingIssueId] = useState<string | null>(
+    null,
+  );
+  const [activeTab, setActiveTab] = useState<ProfileTab>("active");
 
   useEffect(() => {
     if (!supabase) {
@@ -124,11 +134,17 @@ export function ProfilePage() {
     const [
       { data: summaryData, error: summaryError },
       { data: entriesData, error: entriesError },
+      { data: watchedData, error: watchedError },
     ] =
       await Promise.all([
         supabase.rpc("get_my_profile_summary"),
         supabase.rpc("get_my_profile_entries"),
+        supabase.rpc("get_my_watched_issues"),
       ]);
+
+    if (watchedError && process.env.NODE_ENV === "development") {
+      console.error("get_my_watched_issues RPC error", watchedError);
+    }
 
     if (summaryError || entriesError) {
       if (process.env.NODE_ENV === "development") {
@@ -146,10 +162,12 @@ export function ProfilePage() {
       if (fallback) {
         setSummary(fallback.summary);
         setEntries(fallback.entries);
+        setWatchedIssues([]);
         setProfileError(null);
       } else {
         setSummary(emptySummary);
         setEntries([]);
+        setWatchedIssues([]);
         setProfileError("Profil bilgileri yüklenemedi. Lütfen tekrar dene.");
       }
 
@@ -159,6 +177,7 @@ export function ProfilePage() {
 
     setSummary(parseSummary(summaryData));
     setEntries(parseEntries(entriesData));
+    setWatchedIssues(watchedError ? [] : parseWatchedIssues(watchedData));
     setIsLoadingProfile(false);
   }
 
@@ -280,6 +299,7 @@ export function ProfilePage() {
     setUserEmail(null);
     setSummary(emptySummary);
     setEntries([]);
+    setWatchedIssues([]);
     setFeedback("Çıkış yapıldı.");
   }
 
@@ -306,6 +326,33 @@ export function ProfilePage() {
     await loadProfile();
   }
 
+  async function handleUnwatch(issueId: string) {
+    if (!supabase) {
+      return;
+    }
+
+    setUnwatchingIssueId(issueId);
+    setFeedback(null);
+
+    const { error } = await supabase.rpc("unfollow_issue", {
+      p_issue_id: issueId,
+    });
+
+    setUnwatchingIssueId(null);
+
+    if (error) {
+      if (process.env.NODE_ENV === "development") {
+        console.error("unfollow_issue RPC error", error);
+      }
+
+      setFeedback("Takip durumu güncellenirken bir hata oluştu.");
+      return;
+    }
+
+    setFeedback("Sorun takip listenden çıkarıldı.");
+    await loadProfile();
+  }
+
   const activeReports = entries.filter(
     (entry) => entry.entry_type === "active_report",
   );
@@ -313,6 +360,10 @@ export function ProfilePage() {
     (entry) => entry.entry_type === "withdrawn_report",
   );
   const damageReports = entries.filter((entry) => entry.entry_type === "damage");
+  const verificationReports = entries.filter(
+    (entry) => entry.entry_type === "verified",
+  );
+  const solvedReports = entries.filter((entry) => entry.entry_type === "solved");
   const recentActivity = entries.slice(0, 6);
 
   return (
@@ -364,15 +415,30 @@ export function ProfilePage() {
                 <StatusMessage tone="error">{profileError}</StatusMessage>
               ) : null}
 
-              <SummaryCards summary={summary} />
+              <SummaryCards
+                summary={summary}
+                watchedCount={watchedIssues.length}
+              />
+              <ProfileTabs
+                activeTab={activeTab}
+                counts={{
+                  active: activeReports.length,
+                  damage: damageReports.length,
+                  solved: solvedReports.length,
+                  verified: verificationReports.length,
+                  watching: watchedIssues.length,
+                  withdrawn: withdrawnReports.length,
+                }}
+                onChange={setActiveTab}
+              />
 
               {isLoadingProfile ? (
                 <GlassPanel className="p-4 text-sm text-ink-muted">
                   Profil bilgileri yükleniyor...
                 </GlassPanel>
               ) : (
-                <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-                  <div className="space-y-4">
+                <div className="grid gap-4 lg:grid-cols-[1.35fr_0.65fr]">
+                  {activeTab === "active" ? (
                     <ProfileSection
                       emptyText="Henüz aktif bildirimin yok."
                       entries={activeReports}
@@ -380,20 +446,43 @@ export function ProfilePage() {
                       withdrawingIssueId={withdrawingIssueId}
                       onWithdraw={handleWithdraw}
                     />
-                    <ProfileSection
-                      emptyText="Geri çekilmiş bildirimin yok."
-                      entries={withdrawnReports}
-                      title="Geri çekilen bildirimlerim"
-                    />
-                  </div>
-                  <div className="space-y-4">
+                  ) : null}
+                  {activeTab === "damage" ? (
                     <ProfileSection
                       emptyText="Henüz araç hasarı bildirimin yok."
                       entries={damageReports}
                       title="Araç hasarı bildirimlerim"
                     />
-                    <RecentActivity entries={recentActivity} />
-                  </div>
+                  ) : null}
+                  {activeTab === "verified" ? (
+                    <ProfileSection
+                      emptyText="Henüz doğrulama yapmadın."
+                      entries={verificationReports}
+                      title="Doğrulamalarım"
+                    />
+                  ) : null}
+                  {activeTab === "watching" ? (
+                    <WatchedIssuesSection
+                      issues={watchedIssues}
+                      unwatchingIssueId={unwatchingIssueId}
+                      onUnwatch={handleUnwatch}
+                    />
+                  ) : null}
+                  {activeTab === "withdrawn" ? (
+                    <ProfileSection
+                      emptyText="Geri çekilmiş bildirimin yok."
+                      entries={withdrawnReports}
+                      title="Geri çekilen bildirimlerim"
+                    />
+                  ) : null}
+                  {activeTab === "solved" ? (
+                    <ProfileSection
+                      emptyText="Henüz çözüldü bildirimin yok."
+                      entries={solvedReports}
+                      title="Çözüldü bildirimlerim"
+                    />
+                  ) : null}
+                  <RecentActivity entries={recentActivity} />
                 </div>
               )}
             </>
@@ -428,26 +517,85 @@ function LoginPanel({ authStatus }: { authStatus: AuthStatus }) {
   );
 }
 
-function SummaryCards({ summary }: { summary: ProfileSummary }) {
+function SummaryCards({
+  summary,
+  watchedCount,
+}: {
+  summary: ProfileSummary;
+  watchedCount: number;
+}) {
   const cards = [
     ["Aktif bildirimlerim", summary.active_report_count],
-    ["Geri çekilen bildirimlerim", summary.withdrawn_report_count],
     ["Hasar bildirimlerim", summary.damage_report_count],
     ["Doğrulamalarım", summary.verification_count],
+    ["Takip ettiklerim", watchedCount],
+    ["Geri çekilenler", summary.withdrawn_report_count],
     ["Çözüldü bildirimlerim", summary.solved_report_count],
   ] as const;
 
   return (
-    <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
+    <div className="grid grid-cols-2 gap-2 md:grid-cols-6">
       {cards.map(([label, value]) => (
         <GlassPanel className="p-3" key={label}>
-          <p className="text-2xl font-semibold text-ink">{value}</p>
+          <p className="text-xl font-semibold text-ink">{value}</p>
           <p className="mt-1 text-xs font-semibold leading-5 text-ink-muted">
             {label}
           </p>
         </GlassPanel>
       ))}
     </div>
+  );
+}
+
+function ProfileTabs({
+  activeTab,
+  counts,
+  onChange,
+}: {
+  activeTab: ProfileTab;
+  counts: Record<ProfileTab, number>;
+  onChange: (tab: ProfileTab) => void;
+}) {
+  const tabs: { label: string; value: ProfileTab }[] = [
+    { label: "Aktif", value: "active" },
+    { label: "Hasar", value: "damage" },
+    { label: "Doğrulama", value: "verified" },
+    { label: "Takip", value: "watching" },
+    { label: "Geri çekilen", value: "withdrawn" },
+    { label: "Çözüldü", value: "solved" },
+  ];
+
+  return (
+    <GlassPanel className="p-2">
+      <div
+        aria-label="Profil bölümleri"
+        className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 lg:grid-cols-6"
+        role="tablist"
+      >
+        {tabs.map((tab) => {
+          const isSelected = activeTab === tab.value;
+
+          return (
+            <button
+              aria-selected={isSelected}
+              className={cn(
+                "inline-flex min-h-10 items-center justify-center gap-1.5 rounded-full border px-3 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-road-blue",
+                isSelected
+                  ? "border-road-blue bg-white text-ink shadow-sm"
+                  : "border-transparent bg-white/45 text-ink-muted hover:bg-white/75 hover:text-ink",
+              )}
+              key={tab.value}
+              onClick={() => onChange(tab.value)}
+              role="tab"
+              type="button"
+            >
+              {tab.label}
+              <span className="text-xs text-ink-subtle">{counts[tab.value]}</span>
+            </button>
+          );
+        })}
+      </div>
+    </GlassPanel>
   );
 }
 
@@ -504,7 +652,7 @@ function ProfileEntryCard({
 
   return (
     <article className="rounded-2xl border border-slate-200 bg-white/62 p-3">
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-1.5">
         <Badge>{categoryLabels[entry.category]}</Badge>
         <Badge muted>{severityLabels[entry.severity]}</Badge>
         <Badge muted>{statusLabels[entry.status]}</Badge>
@@ -512,15 +660,16 @@ function ProfileEntryCard({
           {intensity.label}
         </IntensityBadge>
       </div>
-      <div className="mt-3 grid gap-1 text-sm text-ink-muted">
-        <p>Bildirim tarihi: {formatDate(entry.reported_at)}</p>
+      <div className="mt-3 grid gap-1 text-sm text-ink-muted sm:grid-cols-2">
+        <p>{formatDate(entry.reported_at)}</p>
         {entry.withdrawn_at ? (
-          <p>Geri çekilme tarihi: {formatDate(entry.withdrawn_at)}</p>
+          <p>Geri çekildi: {formatDate(entry.withdrawn_at)}</p>
         ) : null}
         <p>{entry.open_days} gündür açık görünüyor.</p>
-        <p>{entry.reporter_count} kullanıcı bildirdi.</p>
-        <p>{entry.verification_count} kullanıcı doğruladı.</p>
-        <p>{entry.damage_count} araç hasarı bildirildi.</p>
+        <p>
+          {entry.reporter_count} bildirim · {entry.verification_count} doğrulama ·{" "}
+          {entry.damage_count} hasar
+        </p>
       </div>
       <div className="mt-3 flex flex-wrap gap-2">
         {entry.issue_is_public ? (
@@ -529,7 +678,7 @@ function ProfileEntryCard({
             href={`/?issue=${entry.issue_id}`}
           >
             Haritada gör
-            <ExternalLink className="size-4" />
+            <MapPin className="size-4" />
           </Link>
         ) : (
           <p className="rounded-2xl border border-slate-200 bg-white/70 px-3 py-2 text-sm font-semibold text-ink-muted">
@@ -548,6 +697,111 @@ function ProfileEntryCard({
               : "Bildirimi geri çek"}
           </button>
         ) : null}
+      </div>
+    </article>
+  );
+}
+
+function WatchedIssuesSection({
+  issues,
+  unwatchingIssueId,
+  onUnwatch,
+}: {
+  issues: ProfileWatchedIssue[];
+  unwatchingIssueId: string | null;
+  onUnwatch: (issueId: string) => void;
+}) {
+  return (
+    <GlassPanel className="p-4">
+      <h2 className="text-base font-semibold text-ink">
+        Takip ettiğim sorunlar
+      </h2>
+      {issues.length === 0 ? (
+        <p className="mt-3 text-sm text-ink-muted">
+          Henüz takip ettiğin yol sorunu yok.
+        </p>
+      ) : (
+        <div className="mt-3 space-y-3">
+          {issues.map((issue) => (
+            <WatchedIssueCard
+              issue={issue}
+              key={issue.issue_id}
+              unwatchingIssueId={unwatchingIssueId}
+              onUnwatch={onUnwatch}
+            />
+          ))}
+        </div>
+      )}
+    </GlassPanel>
+  );
+}
+
+function WatchedIssueCard({
+  issue,
+  unwatchingIssueId,
+  onUnwatch,
+}: {
+  issue: ProfileWatchedIssue;
+  unwatchingIssueId: string | null;
+  onUnwatch: (issueId: string) => void;
+}) {
+  const intensity = calculateIssueIntensity({
+    ...issue,
+    created_at: issue.watched_at,
+    updated_at: issue.watched_at,
+  });
+
+  return (
+    <article className="rounded-2xl border border-slate-200 bg-white/62 p-3">
+      <div className="flex flex-wrap items-center gap-1.5">
+        <Badge>{categoryLabels[issue.category]}</Badge>
+        <Badge muted>{severityLabels[issue.severity]}</Badge>
+        <Badge muted>{statusLabels[issue.status]}</Badge>
+        <IntensityBadge level={intensity.level}>
+          {intensity.label}
+        </IntensityBadge>
+      </div>
+      <div className="mt-3 grid gap-1 text-sm text-ink-muted sm:grid-cols-2">
+        <p>Takip: {formatDate(issue.watched_at)}</p>
+        <p>{issue.open_days} gündür açık görünüyor.</p>
+        <p>
+          {issue.reporter_count} bildirim · {issue.verification_count} doğrulama
+        </p>
+        {issue.watcher_count > 0 ? <p>{issue.watcher_count} takip</p> : null}
+      </div>
+      <div className="mt-3 flex flex-wrap gap-2">
+        {issue.issue_is_public ? (
+          <>
+            <Link
+              className="inline-flex min-h-11 items-center gap-2 rounded-full border border-slate-200 bg-white/80 px-4 text-sm font-semibold text-ink transition hover:bg-white"
+              href={`/?issue=${issue.issue_id}`}
+            >
+              Haritada gör
+              <MapPin className="size-4" />
+            </Link>
+            <Link
+              className="inline-flex min-h-11 items-center gap-2 rounded-full border border-slate-200 bg-white/80 px-4 text-sm font-semibold text-ink transition hover:bg-white"
+              href={`/i/${issue.issue_id}`}
+            >
+              Detayı gör
+              <ExternalLink className="size-4" />
+            </Link>
+          </>
+        ) : (
+          <p className="rounded-2xl border border-slate-200 bg-white/70 px-3 py-2 text-sm font-semibold text-ink-muted">
+            Bu sorun artık aktif listede görünmüyor.
+          </p>
+        )}
+        <button
+          className="min-h-11 rounded-full border border-slate-200 bg-white/80 px-4 text-sm font-semibold text-ink transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+          disabled={unwatchingIssueId === issue.issue_id}
+          onClick={() => onUnwatch(issue.issue_id)}
+          type="button"
+        >
+          {unwatchingIssueId === issue.issue_id
+            ? "Güncelleniyor..."
+            : "Takip ediliyor"}
+        </button>
       </div>
     </article>
   );
@@ -700,6 +954,59 @@ function parseEntries(value: unknown): ProfileEntry[] {
         verification_count: numberField(record.verification_count),
         withdrawn_at:
           typeof record.withdrawn_at === "string" ? record.withdrawn_at : null,
+      },
+    ];
+  });
+}
+
+function parseWatchedIssues(value: unknown): ProfileWatchedIssue[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.flatMap((item) => {
+    if (!item || typeof item !== "object") {
+      return [];
+    }
+
+    const record = item as Record<string, unknown>;
+
+    if (
+      typeof record.issue_id !== "string" ||
+      typeof record.category !== "string" ||
+      typeof record.severity !== "string" ||
+      typeof record.status !== "string" ||
+      typeof record.first_reported_at !== "string" ||
+      typeof record.watched_at !== "string"
+    ) {
+      return [];
+    }
+
+    return [
+      {
+        category: record.category as ProfileWatchedIssue["category"],
+        damage_count: numberField(record.damage_count),
+        false_report_count: numberField(record.false_report_count),
+        first_reported_at: record.first_reported_at,
+        issue_id: record.issue_id,
+        issue_is_public:
+          typeof record.issue_is_public === "boolean"
+            ? record.issue_is_public
+            : true,
+        last_verified_at:
+          typeof record.last_verified_at === "string"
+            ? record.last_verified_at
+            : null,
+        latitude: numberField(record.latitude),
+        longitude: numberField(record.longitude),
+        open_days: numberField(record.open_days),
+        reporter_count: numberField(record.reporter_count),
+        severity: record.severity as ProfileWatchedIssue["severity"],
+        solved_count: numberField(record.solved_count),
+        status: record.status as ProfileWatchedIssue["status"],
+        verification_count: numberField(record.verification_count),
+        watched_at: record.watched_at,
+        watcher_count: numberField(record.watcher_count),
       },
     ];
   });

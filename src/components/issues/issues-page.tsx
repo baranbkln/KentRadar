@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, ExternalLink, ListFilter } from "lucide-react";
+import { ArrowLeft, ExternalLink, ListFilter, MapPin } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
@@ -198,7 +198,7 @@ function IssueRankingCard({
           href={`/?issue=${issue.id}`}
         >
           Haritada gör
-          <ExternalLink className="size-4" />
+          <MapPin className="size-4" />
         </Link>
         <Link
           className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full border border-slate-200 bg-white/80 px-4 text-sm font-semibold text-ink transition hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-road-blue sm:w-auto"
