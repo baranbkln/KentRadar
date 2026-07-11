@@ -45,7 +45,7 @@ export const statusLabels: Record<RoadIssueStatus, string> = {
   verified: "Doğrulandı",
   active: "Aktif",
   stale: "Güncelliği Belirsiz",
-  likely_solved: "Muhtemelen Çözüldü",
+  likely_solved: "Çözülmüş olabilir",
   solved: "Çözüldü",
   disputed: "Tartışmalı",
 };
