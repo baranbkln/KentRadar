@@ -192,13 +192,22 @@ function IssueRankingCard({
         <p>{getRankingHint(rankingType, issue)}</p>
       </div>
 
-      <Link
-        className="mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-road-blue px-4 text-sm font-semibold text-white transition hover:bg-blue-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-road-blue sm:w-auto"
-        href={`/?issue=${issue.id}`}
-      >
-        Haritada gör
-        <ExternalLink className="size-4" />
-      </Link>
+      <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+        <Link
+          className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-road-blue px-4 text-sm font-semibold text-white transition hover:bg-blue-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-road-blue sm:w-auto"
+          href={`/?issue=${issue.id}`}
+        >
+          Haritada gör
+          <ExternalLink className="size-4" />
+        </Link>
+        <Link
+          className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full border border-slate-200 bg-white/80 px-4 text-sm font-semibold text-ink transition hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-road-blue sm:w-auto"
+          href={`/i/${issue.id}`}
+        >
+          Detayı gör
+          <ExternalLink className="size-4" />
+        </Link>
+      </div>
     </GlassPanel>
   );
 }

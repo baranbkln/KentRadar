@@ -35,7 +35,7 @@ export function IssueBottomSheet({
 }: IssueBottomSheetProps) {
   return (
     <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[720] p-3 pb-[max(12px,env(safe-area-inset-bottom))] md:hidden">
-      <GlassPanel className="pointer-events-auto max-h-[58dvh] overflow-y-auto px-4 py-4">
+      <GlassPanel className="pointer-events-auto px-4 py-4">
         <div className="mb-3 flex justify-center">
           <div className="h-1 w-12 rounded-full bg-slate-300" />
         </div>

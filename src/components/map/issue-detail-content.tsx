@@ -1,4 +1,6 @@
 import { useState } from "react";
+import Link from "next/link";
+import { Check, Copy, ExternalLink } from "lucide-react";
 import { MagicLinkForm } from "@/components/auth/magic-link-form";
 import {
   categoryLabels,
@@ -16,6 +18,10 @@ import {
   getIssueIntensityClassName,
   getIssueIntensityDescription,
 } from "@/lib/issues/issue-intensity";
+import {
+  getIssuePublicUrl,
+  getIssueShareText,
+} from "@/lib/issues/issue-share";
 import { cn } from "@/lib/utils";
 
 type IssueDetailContentProps = {
@@ -68,10 +74,30 @@ export function IssueDetailContent({
   const intensity = calculateIssueIntensity(issue);
   const [isWithdrawConfirmVisible, setIsWithdrawConfirmVisible] =
     useState(false);
+  const [shareFeedback, setShareFeedback] = useState<string | null>(null);
+
+  async function handleCopyShareLink() {
+    if (!navigator.clipboard) {
+      setShareFeedback("Kopyalanamadı.");
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(
+        `${getIssueShareText(issue)} ${getIssuePublicUrl(
+          issue.id,
+          window.location.origin,
+        )}`,
+      );
+      setShareFeedback("Kopyalandı.");
+    } catch {
+      setShareFeedback("Kopyalanamadı.");
+    }
+  }
 
   return (
-    <div>
-      <div className="mb-4">
+    <div className="space-y-3">
+      <div>
         <div className="mb-2 flex flex-wrap items-center gap-2">
           <Badge>{categoryLabels[issue.category]}</Badge>
           <Badge muted>{severityLabels[issue.severity]}</Badge>
@@ -85,26 +111,57 @@ export function IssueDetailContent({
         </h2>
       </div>
 
-      <div className="mb-4 rounded-2xl border border-slate-200 bg-white/62 p-3">
-        <p className="text-sm font-semibold text-ink">
-          Yoğunluk: {intensity.label}
-        </p>
-        <p className="mt-1 text-sm leading-5 text-ink-muted">
+      <div className="rounded-2xl border border-slate-200 bg-white/62 p-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-sm font-semibold text-ink">
+            Yoğunluk: {intensity.label}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-full border border-slate-200 bg-white/80 px-3 text-xs font-semibold text-ink transition hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-road-blue"
+              onClick={handleCopyShareLink}
+              type="button"
+            >
+              {shareFeedback === "Kopyalandı." ? (
+                <Check className="size-3.5" />
+              ) : (
+                <Copy className="size-3.5" />
+              )}
+              Paylaş
+            </button>
+            <Link
+              className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-full border border-slate-200 bg-white/80 px-3 text-xs font-semibold text-ink transition hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-road-blue"
+              href={`/i/${issue.id}`}
+            >
+              Detayı aç
+              <ExternalLink className="size-3.5" />
+            </Link>
+          </div>
+        </div>
+        <p className="mt-1 text-xs leading-5 text-ink-muted">
           {getIssueIntensityDescription(issue)}
         </p>
-      </div>
-
-      <div className="space-y-2 text-sm text-ink-muted">
-        <p>Bu yol sorunu {daysOpen(issue.first_reported_at)} gündür açık görünüyor.</p>
-        {"reporter_count" in issue ? (
-          <p>{issue.reporter_count} kullanıcı bildirdi.</p>
+        {shareFeedback ? (
+          <p className="mt-2 text-xs font-semibold text-emerald-700">
+            {shareFeedback}
+          </p>
         ) : null}
-        <p>{verifiedUserCount} kullanıcı doğruladı.</p>
-        <p>{issue.damage_count} araç hasarı bildirildi.</p>
-        <p>Son doğrulama: {formatLastVerified(issue.last_verified_at)}</p>
       </div>
 
-      <div className="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-2">
+      <div className="grid grid-cols-2 gap-2 text-sm">
+        <MiniMetric
+          label="Açık süre"
+          value={`${daysOpen(issue.first_reported_at)} gün`}
+        />
+        <MiniMetric label="Bildiren" value={`${issue.reporter_count}`} />
+        <MiniMetric label="Doğrulama" value={`${verifiedUserCount}`} />
+        <MiniMetric label="Hasar" value={`${issue.damage_count}`} />
+      </div>
+      <p className="text-xs text-ink-subtle">
+        Son doğrulama: {formatLastVerified(issue.last_verified_at)}
+      </p>
+
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         {issueActions.map((action) => (
           <ActionButton
             action={action}
@@ -119,7 +176,7 @@ export function IssueDetailContent({
       </div>
 
       {userState?.has_active_report ? (
-        <div className="mt-3 rounded-2xl border border-slate-200 bg-white/62 p-3">
+        <div className="rounded-2xl border border-slate-200 bg-white/62 p-3">
           {isWithdrawConfirmVisible ? (
             <div className="space-y-2">
               <p className="text-sm font-semibold text-ink">
@@ -165,9 +222,20 @@ export function IssueDetailContent({
         <AuthPrompt authStatus={authStatus} />
       ) : null}
 
-      <p className="mt-3 text-xs text-ink-subtle">
+      <p className="text-xs text-ink-subtle">
         Konuma yakınsan bu yol sorununu doğrulayabilir veya durumunu bildirebilirsin.
       </p>
+    </div>
+  );
+}
+
+function MiniMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white/55 px-3 py-2">
+      <p className="text-[11px] font-semibold uppercase text-ink-subtle">
+        {label}
+      </p>
+      <p className="mt-0.5 text-sm font-semibold text-ink">{value}</p>
     </div>
   );
 }
