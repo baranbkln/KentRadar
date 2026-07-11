@@ -15,12 +15,14 @@ import { ActiveFilterSummary } from "@/components/map/active-filter-summary";
 import { FilterSheet } from "@/components/map/filter-sheet";
 import { FloatingMapButton } from "@/components/map/floating-map-button";
 import { GlassPanel } from "@/components/map/glass-panel";
+import type { AccountSummary } from "@/hooks/use-account-summary";
 import type { RoadIssueFilters } from "@/lib/road-issues/types";
 
 type MapControlBarProps = {
   authStatus: "loading" | "authenticated" | "unauthenticated" | "unconfigured";
   filters: RoadIssueFilters;
   isAuthPanelOpen: boolean;
+  isAccountSummaryLoading: boolean;
   isFilterOpen: boolean;
   isIssueRankingButtonDisabled: boolean;
   isIssueRankingPreviewOpen: boolean;
@@ -28,6 +30,7 @@ type MapControlBarProps = {
   locationMessage: string | null;
   totalCount: number;
   visibleCount: number;
+  accountSummary: AccountSummary;
   userEmail: string | null;
   onFiltersChange: (filters: RoadIssueFilters) => void;
   onFilterClose: () => void;
@@ -44,6 +47,7 @@ export function MapControlBar({
   authStatus,
   filters,
   isAuthPanelOpen,
+  isAccountSummaryLoading,
   isFilterOpen,
   isIssueRankingButtonDisabled,
   isIssueRankingPreviewOpen,
@@ -51,6 +55,7 @@ export function MapControlBar({
   locationMessage,
   totalCount,
   visibleCount,
+  accountSummary,
   userEmail,
   onFiltersChange,
   onFilterClose,
@@ -127,11 +132,18 @@ export function MapControlBar({
               <div className="hidden min-h-11 items-center gap-1.5 rounded-full bg-white/55 px-2 text-sm font-semibold text-ink sm:inline-flex">
                 <button
                   aria-expanded={isProfilePreviewOpen}
-                  className="max-w-[118px] truncate rounded-full px-2 py-1 transition hover:bg-white/70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-road-blue"
+                  className="max-w-[168px] truncate rounded-full px-2 py-1 text-left transition hover:bg-white/70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-road-blue lg:max-w-[220px]"
                   onClick={onToggleProfilePreview}
                   type="button"
                 >
-                  {shortenEmail(userEmail)}
+                  <span className="block truncate text-xs font-semibold leading-4 text-ink">
+                    {isAccountSummaryLoading
+                      ? "Hesap"
+                      : `${accountSummary.levelLabel} · ${accountSummary.confirmedPoints} puan`}
+                  </span>
+                  <span className="block truncate text-[11px] leading-4 text-ink-muted">
+                    {shortenEmail(userEmail)}
+                  </span>
                 </button>
                 <button
                   className="inline-flex min-h-8 items-center gap-1 rounded-full px-2 text-xs font-semibold text-ink-muted transition hover:bg-white/70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-road-blue"
@@ -163,7 +175,9 @@ export function MapControlBar({
                   title={shortenEmail(userEmail)}
                   type="button"
                 >
-                  {shortenEmail(userEmail).slice(0, 1)}
+                  {isAccountSummaryLoading
+                    ? "..."
+                    : `${accountSummary.confirmedPoints}`}
                 </button>
                 <FloatingMapButton
                   aria-label="Çıkış yap"

@@ -16,6 +16,7 @@ import { MapStatusOverlay } from "@/components/map/map-status-overlay";
 import { ProfilePreview } from "@/components/map/profile-preview";
 import { RoadIssueMarker } from "@/components/map/road-issue-marker";
 import { SelectedLocationMarker } from "@/components/map/selected-location-marker";
+import { useAccountSummary } from "@/hooks/use-account-summary";
 import { useRoadIssues } from "@/hooks/use-road-issues";
 import type {
   RoadIssueCategory,
@@ -91,6 +92,13 @@ export function RoadIssueMap() {
   const handledIssueParamRef = useRef<string | null>(null);
   const { issues, filteredIssues, isLoading, error, refetch } =
     useRoadIssues(filters);
+  const {
+    isLoadingSummary: isAccountSummaryLoading,
+    loadSummary: loadAccountSummary,
+    resetSummary: resetAccountSummary,
+    summary: accountSummary,
+    summaryError: accountSummaryError,
+  } = useAccountSummary(supabase);
 
   useEffect(() => {
     if (!supabase) {
@@ -130,6 +138,15 @@ export function RoadIssueMap() {
       subscription.unsubscribe();
     };
   }, [supabase]);
+
+  useEffect(() => {
+    if (authStatus === "authenticated") {
+      void loadAccountSummary();
+      return;
+    }
+
+    resetAccountSummary();
+  }, [authStatus, loadAccountSummary, resetAccountSummary]);
 
   const loadIssueUserState = useCallback(
     async (issueId: string) => {
@@ -348,6 +365,7 @@ export function RoadIssueMap() {
     setIssueUserState(null);
     setIsProfilePreviewOpen(false);
     setIsAuthPanelOpen(true);
+    resetAccountSummary();
   }
 
   async function handleSubmitIssue() {
@@ -727,6 +745,7 @@ export function RoadIssueMap() {
           isIssueRankingButtonDisabled={isAddMode}
           isIssueRankingPreviewOpen={isIssueRankingPreviewOpen}
           isProfilePreviewOpen={isProfilePreviewOpen}
+          isAccountSummaryLoading={isAccountSummaryLoading}
           locationMessage={locationMessage}
           onAddIssue={handleStartAddIssue}
           onFiltersChange={setFilters}
@@ -765,6 +784,7 @@ export function RoadIssueMap() {
           }}
           onUseLocation={handleUseLocation}
           totalCount={issues.length}
+          accountSummary={accountSummary}
           userEmail={userEmail}
           visibleCount={filteredIssues.length}
         />
@@ -787,6 +807,9 @@ export function RoadIssueMap() {
 
         {isProfilePreviewOpen && authStatus === "authenticated" ? (
           <ProfilePreview
+            accountSummary={accountSummary}
+            error={accountSummaryError}
+            isLoading={isAccountSummaryLoading}
             onClose={() => setIsProfilePreviewOpen(false)}
             onSignOut={handleSignOut}
             userEmail={userEmail}

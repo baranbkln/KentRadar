@@ -7,6 +7,7 @@ import { MagicLinkForm } from "@/components/auth/magic-link-form";
 import { AppShell } from "@/components/layout/app-shell";
 import { GlassPanel } from "@/components/map/glass-panel";
 import { useCivicDashboard } from "@/hooks/use-civic-dashboard";
+import { useCivicScore } from "@/hooks/use-civic-score";
 import {
   categoryLabels,
   severityLabels,
@@ -16,6 +17,12 @@ import {
   calculateIssueIntensity,
   getIssueIntensityClassName,
 } from "@/lib/issues/issue-intensity";
+import {
+  formatScoreEventLabel,
+  formatScoreStatusLabel,
+  type CivicScoreEvent,
+  type CivicScoreSummary,
+} from "@/lib/score/types";
 import type {
   CivicDashboard,
   ProfileEntry,
@@ -96,6 +103,14 @@ export function ProfilePage() {
     loadDashboard,
     resetDashboard,
   } = useCivicDashboard(supabase);
+  const {
+    isLoadingScore,
+    loadScore,
+    resetScore,
+    scoreError,
+    scoreEvents,
+    scoreSummary,
+  } = useCivicScore(supabase);
 
   useEffect(() => {
     if (!supabase) {
@@ -145,15 +160,18 @@ export function ProfilePage() {
       { data: entriesData, error: entriesError },
       { data: watchedData, error: watchedError },
       dashboardData,
+      scoreData,
     ] =
       await Promise.all([
         supabase.rpc("get_my_profile_summary"),
         supabase.rpc("get_my_profile_entries"),
         supabase.rpc("get_my_watched_issues"),
         loadDashboard(),
+        loadScore(),
       ]);
 
     void dashboardData;
+    void scoreData;
 
     if (watchedError && process.env.NODE_ENV === "development") {
       console.error("get_my_watched_issues RPC error", watchedError);
@@ -314,6 +332,7 @@ export function ProfilePage() {
     setEntries([]);
     setWatchedIssues([]);
     resetDashboard();
+    resetScore();
     setFeedback("Çıkış yapıldı.");
   }
 
@@ -431,10 +450,18 @@ export function ProfilePage() {
               {dashboardError ? (
                 <StatusMessage tone="error">{dashboardError}</StatusMessage>
               ) : null}
+              {scoreError ? (
+                <StatusMessage tone="error">{scoreError}</StatusMessage>
+              ) : null}
 
               <CivicDashboardPanel
                 dashboard={dashboardError ? toDashboardFallback(summary, watchedIssues.length) : dashboard}
                 isLoading={isLoadingDashboard}
+              />
+              <CivicScorePanel
+                events={scoreEvents}
+                isLoading={isLoadingScore}
+                summary={scoreSummary}
               />
               <ProfileTabs
                 activeTab={activeTab}
@@ -657,6 +684,145 @@ function ImpactLine({ label, text }: { label: string; text: string }) {
       <p className="text-xs font-semibold uppercase text-ink-subtle">{label}</p>
       <p className="mt-1 text-sm leading-5 text-ink">{text}</p>
     </div>
+  );
+}
+
+function CivicScorePanel({
+  events,
+  isLoading,
+  summary,
+}: {
+  events: CivicScoreEvent[];
+  isLoading: boolean;
+  summary: CivicScoreSummary;
+}) {
+  return (
+    <GlassPanel className="p-4 md:p-5">
+      <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase text-ink-subtle">
+            Katkı seviyesi
+          </p>
+          <h2 className="mt-1 text-xl font-semibold text-ink">Etki Puanı</h2>
+          <p className="mt-1 max-w-2xl text-sm leading-6 text-ink-muted">
+            Etki Puanı, YolDurumu’na yaptığın doğrulanabilir katkıları gösterir.
+          </p>
+        </div>
+        {isLoading ? (
+          <p className="text-sm font-semibold text-ink-muted">
+            Puan bilgileri güncelleniyor...
+          </p>
+        ) : null}
+      </div>
+
+      <div className="mt-4 grid gap-2 md:grid-cols-3">
+        <ScoreMetricCard
+          helper="Kalıcı katkı puanın."
+          label="Kesinleşmiş puan"
+          value={summary.confirmed_points}
+        />
+        <ScoreMetricCard
+          helper="Katkıların desteklendikçe kesinleşir."
+          label="Bekleyen puan"
+          value={summary.pending_points}
+        />
+        <div className="rounded-2xl border border-slate-200 bg-white/62 p-3">
+          <p className="text-xs font-semibold uppercase text-ink-subtle">
+            Seviye
+          </p>
+          <p className="mt-1 text-lg font-semibold text-ink">
+            {summary.level_label}
+          </p>
+          <p className="mt-1 text-xs leading-5 text-ink-muted">
+            Seviye yalnızca profilinde gösterilir; sıralama değildir.
+          </p>
+        </div>
+      </div>
+
+      <p className="mt-3 rounded-2xl border border-slate-200 bg-white/58 px-3 py-2 text-sm leading-5 text-ink-muted">
+        Bekleyen puanlar, katkıların başka kullanıcılar tarafından
+        desteklendikçe kesinleşir. Yanlış veya geri çekilen bildirimlerden
+        gelen puanlar geri alınabilir.
+      </p>
+
+      <div className="mt-4">
+        <div className="flex items-center justify-between gap-3">
+          <h3 className="text-base font-semibold text-ink">Katkı geçmişi</h3>
+          <p className="text-xs font-semibold text-ink-subtle">Son 10 kayıt</p>
+        </div>
+        {events.length === 0 ? (
+          <p className="mt-3 rounded-2xl border border-slate-200 bg-white/64 px-3 py-2 text-sm text-ink-muted">
+            Etki puanı Stage 11’den itibaren takip edilir. Yeni katkıların
+            burada görünecek.
+          </p>
+        ) : (
+          <div className="mt-3 grid gap-2">
+            {events.map((event) => (
+              <ScoreEventRow
+                event={event}
+                key={`${event.event_type}-${event.issue_id ?? "none"}-${event.created_at}`}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    </GlassPanel>
+  );
+}
+
+function ScoreMetricCard({
+  helper,
+  label,
+  value,
+}: {
+  helper: string;
+  label: string;
+  value: number;
+}) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white/62 p-3">
+      <p className="text-xs font-semibold uppercase text-ink-subtle">{label}</p>
+      <p className="mt-1 text-2xl font-semibold text-ink">{value}</p>
+      <p className="mt-1 text-xs leading-5 text-ink-muted">{helper}</p>
+    </div>
+  );
+}
+
+function ScoreEventRow({ event }: { event: CivicScoreEvent }) {
+  return (
+    <article className="flex flex-col gap-2 rounded-2xl border border-slate-200 bg-white/62 p-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="min-w-0">
+        <p className="font-semibold text-ink">
+          {formatScoreEventLabel(event.event_type)}
+        </p>
+        <p className="mt-1 text-xs text-ink-muted">
+          {formatDate(event.created_at)} · {formatScoreStatusLabel(event.status)}
+        </p>
+      </div>
+      <div className="flex shrink-0 items-center gap-2">
+        <span
+          className={cn(
+            "rounded-full border px-2.5 py-1 text-xs font-semibold",
+            event.status === "confirmed"
+              ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+              : event.status === "pending"
+                ? "border-amber-200 bg-amber-50 text-amber-700"
+                : "border-slate-200 bg-white/80 text-ink-muted",
+          )}
+        >
+          +{event.points}
+        </span>
+        {event.issue_id ? (
+          <Link
+            className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-slate-200 bg-white/80 px-3 text-xs font-semibold text-ink transition hover:bg-white"
+            href={`/?issue=${event.issue_id}`}
+          >
+            Haritada gör
+            <MapPin className="size-3.5" />
+          </Link>
+        ) : null}
+      </div>
+    </article>
   );
 }
 
