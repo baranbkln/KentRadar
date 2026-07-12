@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { MapContainer, TileLayer, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, useMap, useMapEvents } from "react-leaflet";
 import type { Map as LeafletMap } from "leaflet";
 import { AppShell } from "@/components/layout/app-shell";
 import { AddIssuePanel } from "@/components/map/add-issue-panel";
@@ -18,7 +18,10 @@ import { ProfilePreview } from "@/components/map/profile-preview";
 import { RoadIssueMarker } from "@/components/map/road-issue-marker";
 import { SelectedLocationMarker } from "@/components/map/selected-location-marker";
 import { useAccountSummary } from "@/hooks/use-account-summary";
-import { useRoadIssues } from "@/hooks/use-road-issues";
+import {
+  useRoadIssues,
+  type RoadIssueMapViewport,
+} from "@/hooks/use-road-issues";
 import type {
   RoadIssueCategory,
   RoadIssueSeverity,
@@ -45,6 +48,7 @@ import { createOptionalClient } from "@/lib/supabase/browser";
 const ANKARA_CENTER: [number, number] = [39.9334, 32.8597];
 const DEFAULT_ZOOM = 12;
 const ISSUE_ACTION_RANGE_METERS = 500;
+const VIEWPORT_FETCH_DEBOUNCE_MS = 550;
 
 type AuthStatus = "loading" | "authenticated" | "unauthenticated" | "unconfigured";
 
@@ -96,8 +100,16 @@ export function RoadIssueMap() {
   const [locationMessage, setLocationMessage] = useState<string | null>(null);
   const mapRef = useRef<LeafletMap | null>(null);
   const handledIssueParamRef = useRef<string | null>(null);
-  const { issues, filteredIssues, isLoading, error, refetch } =
-    useRoadIssues(filters);
+  const [mapViewport, setMapViewport] =
+    useState<RoadIssueMapViewport | null>(null);
+  const {
+    issues,
+    filteredIssues,
+    isLoading,
+    error,
+    fetchIssueById,
+    refetch,
+  } = useRoadIssues(filters, mapViewport);
   const {
     isLoadingSummary: isAccountSummaryLoading,
     loadSummary: loadAccountSummary,
@@ -105,6 +117,17 @@ export function RoadIssueMap() {
     summary: accountSummary,
     summaryError: accountSummaryError,
   } = useAccountSummary(supabase);
+
+  const handleViewportChange = useCallback(
+    (nextViewport: RoadIssueMapViewport) => {
+      setMapViewport((currentViewport) =>
+        currentViewport && areViewportsEqual(currentViewport, nextViewport)
+          ? currentViewport
+          : nextViewport,
+      );
+    },
+    [],
+  );
 
   useEffect(() => {
     if (!supabase) {
@@ -210,7 +233,7 @@ export function RoadIssueMap() {
   useEffect(() => {
     const issueId = searchParams.get("issue");
 
-    if (!issueId || isLoading || error) {
+    if (!issueId || error) {
       return;
     }
 
@@ -219,19 +242,34 @@ export function RoadIssueMap() {
     }
 
     handledIssueParamRef.current = issueId;
-    const issue = issues.find((item) => item.id === issueId);
+    const requestedIssueId = issueId;
+    let isCancelled = false;
 
-    if (!issue) {
-      setLocationMessage("Bu yol sorunu artık aktif haritada görünmüyor.");
-      return;
+    async function openRequestedIssue() {
+      const issue = await fetchIssueById(requestedIssueId);
+
+      if (isCancelled) {
+        return;
+      }
+
+      if (!issue) {
+        setLocationMessage("Bu yol sorunu artık aktif haritada görünmüyor.");
+        return;
+      }
+
+      setSelectedIssue(issue);
+      setFilters({ categories: [], status: "all" });
+      mapRef.current?.flyTo([issue.latitude, issue.longitude], 17, {
+        duration: 0.7,
+      });
     }
 
-    setSelectedIssue(issue);
-    setFilters({ categories: [], status: "all" });
-    mapRef.current?.flyTo([issue.latitude, issue.longitude], 17, {
-      duration: 0.7,
-    });
-  }, [error, isLoading, issues, searchParams]);
+    void openRequestedIssue();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [error, fetchIssueById, searchParams]);
 
   const statusOverlay = useMemo(() => {
     if (isLoading) {
@@ -248,22 +286,22 @@ export function RoadIssueMap() {
       };
     }
 
-    if (issues.length === 0) {
-      return {
-        title: "Henüz yol sorunu yok",
-        body: "Kayıt geldiğinde haritada pin olarak görünecek.",
-      };
-    }
-
-    if (filteredIssues.length === 0 && hasActiveFilters) {
+    if (issues.length === 0 && hasActiveFilters) {
       return {
         title: "Bu filtrelerde kayıt yok",
         body: "Kategori veya durum filtresini değiştirerek tekrar deneyebilirsin.",
       };
     }
 
+    if (issues.length === 0) {
+      return {
+        title: "Bu harita alanında yol sorunu yok",
+        body: "Haritayı hareket ettirerek başka bir alanı inceleyebilirsin.",
+      };
+    }
+
     return null;
-  }, [error, filteredIssues.length, hasActiveFilters, isLoading, issues.length]);
+  }, [error, hasActiveFilters, isLoading, issues.length]);
 
   function handleIssueSelect(issue: PublicRoadIssue) {
     setSelectedIssue(issue);
@@ -316,8 +354,7 @@ export function RoadIssueMap() {
     let issue = issues.find((item) => item.id === issueId);
 
     if (!issue) {
-      const latestIssues = await refetch();
-      issue = latestIssues.find((item) => item.id === issueId);
+      issue = (await fetchIssueById(issueId)) ?? undefined;
     }
 
     if (!issue) {
@@ -439,7 +476,9 @@ export function RoadIssueMap() {
     }
 
     const latestIssues = await refetch();
-    const reportedIssue = latestIssues.find((issue) => issue.id === result.issue_id);
+    const reportedIssue =
+      latestIssues.find((issue) => issue.id === result.issue_id) ??
+      (await fetchIssueById(result.issue_id));
     const successMessage = getCreateIssueSuccessMessage(result);
 
     let message = result.damage_report_added
@@ -583,7 +622,9 @@ export function RoadIssueMap() {
     }
 
     const latestIssues = await refetch();
-    const updatedIssue = latestIssues.find((item) => item.id === issue.id);
+    const updatedIssue =
+      latestIssues.find((item) => item.id === issue.id) ??
+      (await fetchIssueById(issue.id));
 
     if (updatedIssue) {
       setSelectedIssue(updatedIssue);
@@ -637,7 +678,9 @@ export function RoadIssueMap() {
     }
 
     const latestIssues = await refetch();
-    const updatedIssue = latestIssues.find((item) => item.id === issue.id);
+    const updatedIssue =
+      latestIssues.find((item) => item.id === issue.id) ??
+      (await fetchIssueById(issue.id));
 
     setLoadingIssueAction(null);
 
@@ -728,6 +771,7 @@ export function RoadIssueMap() {
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
+          <MapViewportObserver onChange={handleViewportChange} />
           <MapKeyboardFocus />
           <MapAddClickHandler
             enabled={isAddMode && authStatus === "authenticated"}
@@ -1137,6 +1181,67 @@ function parseIssueUserState(value: unknown): IssueUserState | null {
     has_withdrawn_report: record.has_withdrawn_report,
     issue_id: record.issue_id,
   };
+}
+
+function MapViewportObserver({
+  onChange,
+}: {
+  onChange: (viewport: RoadIssueMapViewport) => void;
+}) {
+  const map = useMap();
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const publishViewport = useCallback(() => {
+    const bounds = map.getBounds();
+
+    onChange({
+      minLatitude: bounds.getSouth(),
+      minLongitude: bounds.getWest(),
+      maxLatitude: bounds.getNorth(),
+      maxLongitude: bounds.getEast(),
+      zoom: map.getZoom(),
+    });
+  }, [map, onChange]);
+
+  const scheduleViewportPublish = useCallback(() => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+
+    debounceTimerRef.current = setTimeout(() => {
+      debounceTimerRef.current = null;
+      publishViewport();
+    }, VIEWPORT_FETCH_DEBOUNCE_MS);
+  }, [publishViewport]);
+
+  useMapEvents({
+    moveend: scheduleViewportPublish,
+  });
+
+  useEffect(() => {
+    publishViewport();
+
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, [publishViewport]);
+
+  return null;
+}
+
+function areViewportsEqual(
+  left: RoadIssueMapViewport,
+  right: RoadIssueMapViewport,
+) {
+  return (
+    left.zoom === right.zoom &&
+    left.minLatitude.toFixed(5) === right.minLatitude.toFixed(5) &&
+    left.minLongitude.toFixed(5) === right.minLongitude.toFixed(5) &&
+    left.maxLatitude.toFixed(5) === right.maxLatitude.toFixed(5) &&
+    left.maxLongitude.toFixed(5) === right.maxLongitude.toFixed(5)
+  );
 }
 
 function MapKeyboardFocus() {
