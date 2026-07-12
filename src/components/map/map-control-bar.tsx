@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  CalendarCheck,
   Filter,
   Info,
   ListFilter,
@@ -8,6 +9,7 @@ import {
   LogIn,
   LogOut,
   Plus,
+  Trophy,
 } from "lucide-react";
 import Link from "next/link";
 import { MagicLinkForm } from "@/components/auth/magic-link-form";
@@ -26,6 +28,7 @@ type MapControlBarProps = {
   isFilterOpen: boolean;
   isIssueRankingButtonDisabled: boolean;
   isIssueRankingPreviewOpen: boolean;
+  isLeaderboardPreviewOpen: boolean;
   isProfilePreviewOpen: boolean;
   locationMessage: string | null;
   totalCount: number;
@@ -39,6 +42,7 @@ type MapControlBarProps = {
   onToggleAuthPanel: () => void;
   onToggleFilters: () => void;
   onToggleIssueRankingPreview: () => void;
+  onToggleLeaderboardPreview: () => void;
   onToggleProfilePreview: () => void;
   onUseLocation: () => void;
 };
@@ -51,6 +55,7 @@ export function MapControlBar({
   isFilterOpen,
   isIssueRankingButtonDisabled,
   isIssueRankingPreviewOpen,
+  isLeaderboardPreviewOpen,
   isProfilePreviewOpen,
   locationMessage,
   totalCount,
@@ -64,6 +69,7 @@ export function MapControlBar({
   onToggleAuthPanel,
   onToggleFilters,
   onToggleIssueRankingPreview,
+  onToggleLeaderboardPreview,
   onToggleProfilePreview,
   onUseLocation,
 }: MapControlBarProps) {
@@ -128,6 +134,26 @@ export function MapControlBar({
               <ListFilter className="size-5" />
               <span className="hidden lg:inline">Sorun Listesi</span>
             </FloatingMapButton>
+            <FloatingMapButton
+              aria-expanded={isLeaderboardPreviewOpen}
+              aria-label="Katkıcılar"
+              className="bg-white/55 shadow-none"
+              disabled={isIssueRankingButtonDisabled}
+              onClick={onToggleLeaderboardPreview}
+              title="Katkıcılar"
+            >
+              <Trophy className="size-5" />
+              <span className="hidden xl:inline">Katkıcılar</span>
+            </FloatingMapButton>
+            <Link
+              aria-label="Son Çözülenler"
+              className="glass-panel inline-flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-full bg-white/55 px-3 text-sm font-semibold text-ink shadow-none transition hover:bg-white/85 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-road-blue"
+              href="/fixed"
+              title="Son Çözülenler"
+            >
+              <CalendarCheck className="size-5" />
+              <span className="hidden 2xl:inline">Son Çözülenler</span>
+            </Link>
             {authStatus === "authenticated" ? (
               <div className="hidden min-h-11 items-center gap-1.5 rounded-full bg-white/55 px-2 text-sm font-semibold text-ink sm:inline-flex">
                 <button

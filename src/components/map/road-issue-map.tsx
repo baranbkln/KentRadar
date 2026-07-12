@@ -10,6 +10,7 @@ import { CurrentLocationMarker } from "@/components/map/current-location-marker"
 import { IssueBottomSheet } from "@/components/map/issue-bottom-sheet";
 import { IssueRankingPreview } from "@/components/map/issue-ranking-preview";
 import { IssueSidePanel } from "@/components/map/issue-side-panel";
+import { LeaderboardPreview } from "@/components/map/leaderboard-preview";
 import { MapAddClickHandler } from "@/components/map/map-add-click-handler";
 import { MapControlBar } from "@/components/map/map-control-bar";
 import { MapStatusOverlay } from "@/components/map/map-status-overlay";
@@ -28,6 +29,7 @@ import {
   getCurrentPosition,
   getLocationErrorMessage,
 } from "@/lib/geo/location";
+import type { LeaderboardPeriod } from "@/lib/leaderboard/types";
 import type {
   CreateIssueOrMergeDuplicateResult,
   IssueActionFeedback,
@@ -72,9 +74,13 @@ export function RoadIssueMap() {
   const [isAuthPanelOpen, setIsAuthPanelOpen] = useState(false);
   const [isIssueRankingPreviewOpen, setIsIssueRankingPreviewOpen] =
     useState(false);
+  const [isLeaderboardPreviewOpen, setIsLeaderboardPreviewOpen] =
+    useState(false);
   const [isProfilePreviewOpen, setIsProfilePreviewOpen] = useState(false);
   const [issueRankingPreviewType, setIssueRankingPreviewType] =
     useState<PublicIssueRankingType>("most_reported");
+  const [leaderboardPreviewPeriod, setLeaderboardPreviewPeriod] =
+    useState<LeaderboardPeriod>("week");
   const [addError, setAddError] = useState<string | null>(null);
   const [addSuccess, setAddSuccess] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -264,6 +270,7 @@ export function RoadIssueMap() {
     setIssueActionFeedback(null);
     setIsIssueActionAuthPromptVisible(false);
     setIsIssueRankingPreviewOpen(false);
+    setIsLeaderboardPreviewOpen(false);
     setIsProfilePreviewOpen(false);
     setIsFilterOpen(false);
     mapRef.current?.flyTo([issue.latitude, issue.longitude], 17, {
@@ -289,6 +296,7 @@ export function RoadIssueMap() {
   function handleStartAddIssue() {
     setIsAddMode(true);
     setIsIssueRankingPreviewOpen(false);
+    setIsLeaderboardPreviewOpen(false);
     setIsProfilePreviewOpen(false);
     setSelectedIssue(null);
     setIsFilterOpen(false);
@@ -299,6 +307,7 @@ export function RoadIssueMap() {
 
   async function handleOpenIssueFromPreview(issueId: string) {
     setIsIssueRankingPreviewOpen(false);
+    setIsLeaderboardPreviewOpen(false);
     setIsProfilePreviewOpen(false);
     setIssueActionFeedback(null);
     setIsIssueActionAuthPromptVisible(false);
@@ -363,6 +372,7 @@ export function RoadIssueMap() {
     setAuthStatus("unauthenticated");
     setUserEmail(null);
     setIssueUserState(null);
+    setIsLeaderboardPreviewOpen(false);
     setIsProfilePreviewOpen(false);
     setIsAuthPanelOpen(true);
     resetAccountSummary();
@@ -667,6 +677,11 @@ export function RoadIssueMap() {
         return;
       }
 
+      if (isLeaderboardPreviewOpen) {
+        setIsLeaderboardPreviewOpen(false);
+        return;
+      }
+
       if (isIssueRankingPreviewOpen) {
         setIsIssueRankingPreviewOpen(false);
         return;
@@ -692,6 +707,7 @@ export function RoadIssueMap() {
     isAuthPanelOpen,
     isFilterOpen,
     isIssueRankingPreviewOpen,
+    isLeaderboardPreviewOpen,
     isProfilePreviewOpen,
     selectedIssue,
   ]);
@@ -744,6 +760,7 @@ export function RoadIssueMap() {
           isFilterOpen={isFilterOpen}
           isIssueRankingButtonDisabled={isAddMode}
           isIssueRankingPreviewOpen={isIssueRankingPreviewOpen}
+          isLeaderboardPreviewOpen={isLeaderboardPreviewOpen}
           isProfilePreviewOpen={isProfilePreviewOpen}
           isAccountSummaryLoading={isAccountSummaryLoading}
           locationMessage={locationMessage}
@@ -755,6 +772,7 @@ export function RoadIssueMap() {
             setIsAuthPanelOpen((current) => !current);
             setIsFilterOpen(false);
             setIsIssueRankingPreviewOpen(false);
+            setIsLeaderboardPreviewOpen(false);
             setIsProfilePreviewOpen(false);
             setSelectedIssue(null);
             handleCancelAddIssue();
@@ -762,6 +780,7 @@ export function RoadIssueMap() {
           onToggleFilters={() => {
             setIsFilterOpen((current) => !current);
             setIsIssueRankingPreviewOpen(false);
+            setIsLeaderboardPreviewOpen(false);
             setIsProfilePreviewOpen(false);
             setSelectedIssue(null);
             handleCancelAddIssue();
@@ -770,6 +789,16 @@ export function RoadIssueMap() {
             setIsIssueRankingPreviewOpen((current) => !current);
             setIsFilterOpen(false);
             setIsAuthPanelOpen(false);
+            setIsLeaderboardPreviewOpen(false);
+            setIsProfilePreviewOpen(false);
+            setSelectedIssue(null);
+            handleCancelAddIssue();
+          }}
+          onToggleLeaderboardPreview={() => {
+            setIsLeaderboardPreviewOpen((current) => !current);
+            setIsFilterOpen(false);
+            setIsAuthPanelOpen(false);
+            setIsIssueRankingPreviewOpen(false);
             setIsProfilePreviewOpen(false);
             setSelectedIssue(null);
             handleCancelAddIssue();
@@ -777,6 +806,7 @@ export function RoadIssueMap() {
           onToggleProfilePreview={() => {
             setIsProfilePreviewOpen((current) => !current);
             setIsIssueRankingPreviewOpen(false);
+            setIsLeaderboardPreviewOpen(false);
             setIsFilterOpen(false);
             setIsAuthPanelOpen(false);
             setSelectedIssue(null);
@@ -802,6 +832,14 @@ export function RoadIssueMap() {
             onClose={() => setIsIssueRankingPreviewOpen(false)}
             onIssueSelect={handleOpenIssueFromPreview}
             onRankingTypeChange={setIssueRankingPreviewType}
+          />
+        ) : null}
+
+        {isLeaderboardPreviewOpen ? (
+          <LeaderboardPreview
+            period={leaderboardPreviewPeriod}
+            onClose={() => setIsLeaderboardPreviewOpen(false)}
+            onPeriodChange={setLeaderboardPreviewPeriod}
           />
         ) : null}
 
