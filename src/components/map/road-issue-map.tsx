@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { MapContainer, TileLayer, useMap, useMapEvents } from "react-leaflet";
 import type { Map as LeafletMap } from "leaflet";
@@ -919,6 +920,36 @@ export function RoadIssueMap() {
           userEmail={userEmail}
           visibleCount={visibleMapIssueCount}
         />
+
+        <nav
+          aria-label="Yasal ve iletişim bağlantıları"
+          className="glass-panel pointer-events-auto absolute bottom-[max(12px,env(safe-area-inset-bottom))] left-3 z-[600] flex min-h-9 items-center gap-1 rounded-full bg-white/64 px-3 text-[11px] font-medium text-ink-muted shadow-sm backdrop-blur-md md:bottom-5 md:left-5 md:text-xs"
+        >
+          <Link
+            className="rounded-full px-1 py-2 transition hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-road-blue"
+            href="/privacy"
+          >
+            Gizlilik
+          </Link>
+          <span aria-hidden="true" className="text-slate-300">
+            •
+          </span>
+          <Link
+            className="rounded-full px-1 py-2 transition hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-road-blue"
+            href="/terms"
+          >
+            Koşullar
+          </Link>
+          <span aria-hidden="true" className="text-slate-300">
+            •
+          </span>
+          <Link
+            className="rounded-full px-1 py-2 transition hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-road-blue"
+            href="/contact"
+          >
+            İletişim
+          </Link>
+        </nav>
 
         {statusOverlay ? (
           <MapStatusOverlay
