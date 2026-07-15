@@ -28,6 +28,19 @@ export type PublicRoadIssue = {
   updated_at: string;
 };
 
+export type RoadIssueMapCluster = {
+  id: string;
+  latitude: number;
+  longitude: number;
+  issueCount: number;
+  bounds: {
+    minLatitude: number;
+    minLongitude: number;
+    maxLatitude: number;
+    maxLongitude: number;
+  };
+};
+
 export type PublicIssueRankingType =
   | "most_reported"
   | "most_verified"

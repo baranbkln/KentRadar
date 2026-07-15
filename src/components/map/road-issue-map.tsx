@@ -15,6 +15,7 @@ import { MapAddClickHandler } from "@/components/map/map-add-click-handler";
 import { MapControlBar } from "@/components/map/map-control-bar";
 import { MapStatusOverlay } from "@/components/map/map-status-overlay";
 import { ProfilePreview } from "@/components/map/profile-preview";
+import { RoadIssueClusterMarker } from "@/components/map/road-issue-cluster-marker";
 import { RoadIssueMarker } from "@/components/map/road-issue-marker";
 import { SelectedLocationMarker } from "@/components/map/selected-location-marker";
 import { useAccountSummary } from "@/hooks/use-account-summary";
@@ -41,6 +42,7 @@ import type {
   PublicIssueRankingType,
   PublicRoadIssue,
   RoadIssueFilters,
+  RoadIssueMapCluster,
   SelectedRoadIssueLocation,
 } from "@/lib/road-issues/types";
 import { createOptionalClient } from "@/lib/supabase/browser";
@@ -104,12 +106,19 @@ export function RoadIssueMap() {
     useState<RoadIssueMapViewport | null>(null);
   const {
     issues,
+    clusters,
     filteredIssues,
     isLoading,
     error,
     fetchIssueById,
     refetch,
   } = useRoadIssues(filters, mapViewport);
+  const visibleMapIssueCount = useMemo(
+    () =>
+      issues.length +
+      clusters.reduce((total, cluster) => total + cluster.issueCount, 0),
+    [clusters, issues.length],
+  );
   const {
     isLoadingSummary: isAccountSummaryLoading,
     loadSummary: loadAccountSummary,
@@ -286,14 +295,14 @@ export function RoadIssueMap() {
       };
     }
 
-    if (issues.length === 0 && hasActiveFilters) {
+    if (visibleMapIssueCount === 0 && hasActiveFilters) {
       return {
         title: "Bu filtrelerde kayıt yok",
         body: "Kategori veya durum filtresini değiştirerek tekrar deneyebilirsin.",
       };
     }
 
-    if (issues.length === 0) {
+    if (visibleMapIssueCount === 0) {
       return {
         title: "Bu harita alanında yol sorunu yok",
         body: "Haritayı hareket ettirerek başka bir alanı inceleyebilirsin.",
@@ -301,7 +310,7 @@ export function RoadIssueMap() {
     }
 
     return null;
-  }, [error, hasActiveFilters, isLoading, issues.length]);
+  }, [error, hasActiveFilters, isLoading, visibleMapIssueCount]);
 
   function handleIssueSelect(issue: PublicRoadIssue) {
     setSelectedIssue(issue);
@@ -314,6 +323,47 @@ export function RoadIssueMap() {
     mapRef.current?.flyTo([issue.latitude, issue.longitude], 17, {
       duration: 0.6,
     });
+  }
+
+  function handleClusterSelect(cluster: RoadIssueMapCluster) {
+    const map = mapRef.current;
+
+    if (!map) {
+      return;
+    }
+
+    setSelectedIssue(null);
+    setIsIssueRankingPreviewOpen(false);
+    setIsLeaderboardPreviewOpen(false);
+    setIsProfilePreviewOpen(false);
+    setIsFilterOpen(false);
+
+    const { bounds } = cluster;
+    const hasArea =
+      Math.abs(bounds.maxLatitude - bounds.minLatitude) > 0.00001 ||
+      Math.abs(bounds.maxLongitude - bounds.minLongitude) > 0.00001;
+
+    if (!hasArea) {
+      map.flyTo(
+        [cluster.latitude, cluster.longitude],
+        Math.min(map.getZoom() + 2, 11),
+        { duration: 0.55 },
+      );
+      return;
+    }
+
+    map.fitBounds(
+      [
+        [bounds.minLatitude, bounds.minLongitude],
+        [bounds.maxLatitude, bounds.maxLongitude],
+      ],
+      {
+        animate: true,
+        duration: 0.55,
+        maxZoom: Math.min(map.getZoom() + 3, 11),
+        padding: [56, 56],
+      },
+    );
   }
 
   async function handleUseLocation() {
@@ -787,6 +837,13 @@ export function RoadIssueMap() {
           {selectedLocation ? (
             <SelectedLocationMarker location={selectedLocation} />
           ) : null}
+          {clusters.map((cluster) => (
+            <RoadIssueClusterMarker
+              cluster={cluster}
+              key={cluster.id}
+              onSelect={handleClusterSelect}
+            />
+          ))}
           {filteredIssues.map((issue) => (
             <RoadIssueMarker
               isSelected={selectedIssue?.id === issue.id}
@@ -857,10 +914,10 @@ export function RoadIssueMap() {
             handleCancelAddIssue();
           }}
           onUseLocation={handleUseLocation}
-          totalCount={issues.length}
+          totalCount={visibleMapIssueCount}
           accountSummary={accountSummary}
           userEmail={userEmail}
-          visibleCount={filteredIssues.length}
+          visibleCount={visibleMapIssueCount}
         />
 
         {statusOverlay ? (

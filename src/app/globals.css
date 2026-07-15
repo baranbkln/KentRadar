@@ -83,6 +83,31 @@ button {
   width: 0;
 }
 
+.road-issue-cluster-marker {
+  align-items: center;
+  background: rgba(30, 64, 175, 0.9);
+  border: 3px solid rgba(255, 255, 255, 0.94);
+  border-radius: 999px;
+  box-shadow:
+    0 0 0 5px rgba(59, 130, 246, 0.2),
+    0 14px 30px rgba(15, 23, 42, 0.3);
+  color: #ffffff;
+  display: flex;
+  font-size: 13px;
+  font-weight: 800;
+  justify-content: center;
+  letter-spacing: 0;
+  line-height: 1;
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+.road-issue-cluster-marker:hover {
+  box-shadow:
+    0 0 0 7px rgba(59, 130, 246, 0.24),
+    0 16px 34px rgba(15, 23, 42, 0.34);
+  transform: scale(1.06);
+}
+
 .current-location-marker {
   align-items: center;
   animation: current-location-pulse 2s ease-out infinite;

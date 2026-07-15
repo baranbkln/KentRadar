@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createOptionalClient } from "@/lib/supabase/browser";
 import type {
   PublicRoadIssue,
+  RoadIssueMapCluster,
   RoadIssueFilters,
 } from "@/lib/road-issues/types";
 
@@ -17,11 +18,17 @@ export type RoadIssueMapViewport = {
 
 type UseRoadIssuesResult = {
   issues: PublicRoadIssue[];
+  clusters: RoadIssueMapCluster[];
   filteredIssues: PublicRoadIssue[];
   isLoading: boolean;
   error: string | null;
   fetchIssueById: (issueId: string) => Promise<PublicRoadIssue | null>;
   refetch: () => Promise<PublicRoadIssue[]>;
+};
+
+type RoadIssueMapData = {
+  issues: PublicRoadIssue[];
+  clusters: RoadIssueMapCluster[];
 };
 
 const ROAD_ISSUE_COLUMNS =
@@ -35,9 +42,10 @@ export function useRoadIssues(
   viewport: RoadIssueMapViewport | null,
 ): UseRoadIssuesResult {
   const [issues, setIssues] = useState<PublicRoadIssue[]>([]);
+  const [clusters, setClusters] = useState<RoadIssueMapCluster[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const cacheRef = useRef(new Map<string, PublicRoadIssue[]>());
+  const cacheRef = useRef(new Map<string, RoadIssueMapData>());
   const issuesRef = useRef<PublicRoadIssue[]>([]);
   const requestSequenceRef = useRef(0);
   const categoryFilter = useMemo(
@@ -61,9 +69,10 @@ export function useRoadIssues(
     ].join(":");
   }, [categoryFilter, statusFilter, viewport]);
 
-  const commitIssues = useCallback((nextIssues: PublicRoadIssue[]) => {
-    issuesRef.current = nextIssues;
-    setIssues(nextIssues);
+  const commitMapData = useCallback((nextData: RoadIssueMapData) => {
+    issuesRef.current = nextData.issues;
+    setIssues(nextData.issues);
+    setClusters(nextData.clusters);
   }, []);
 
   const loadIssues = useCallback(
@@ -73,13 +82,13 @@ export function useRoadIssues(
       }
 
       const requestSequence = ++requestSequenceRef.current;
-      const cachedIssues = cacheRef.current.get(cacheKey);
+      const cachedData = cacheRef.current.get(cacheKey);
 
-      if (!force && cachedIssues) {
-        commitIssues(cachedIssues);
+      if (!force && cachedData) {
+        commitMapData(cachedData);
         setError(null);
         setIsLoading(false);
-        return cachedIssues;
+        return cachedData.issues;
       }
 
       setIsLoading(true);
@@ -89,7 +98,7 @@ export function useRoadIssues(
 
       if (!supabase) {
         if (requestSequence === requestSequenceRef.current) {
-          commitIssues([]);
+          commitMapData({ clusters: [], issues: [] });
           setError(
             "Supabase bağlantısı için NEXT_PUBLIC_SUPABASE_URL ve NEXT_PUBLIC_SUPABASE_ANON_KEY gerekli.",
           );
@@ -121,23 +130,23 @@ export function useRoadIssues(
           console.error("get_public_issues_in_bbox RPC error", rpcError);
         }
 
-        commitIssues([]);
+        commitMapData({ clusters: [], issues: [] });
         setError("Yol sorunları yüklenemedi. Lütfen tekrar dene.");
         setIsLoading(false);
         return [];
       }
 
-      const loadedIssues = ((data ?? []) as Record<string, unknown>[]).map(
-        withLocationFallback,
-      ) as PublicRoadIssue[];
+      const loadedData = parseMapRows(
+        (data ?? []) as Record<string, unknown>[],
+      );
 
-      rememberCacheEntry(cacheRef.current, cacheKey, loadedIssues);
-      commitIssues(loadedIssues);
+      rememberCacheEntry(cacheRef.current, cacheKey, loadedData);
+      commitMapData(loadedData);
       setError(null);
       setIsLoading(false);
-      return loadedIssues;
+      return loadedData.issues;
     },
-    [cacheKey, categoryFilter, commitIssues, statusFilter, viewport],
+    [cacheKey, categoryFilter, commitMapData, statusFilter, viewport],
   );
 
   useEffect(() => {
@@ -185,6 +194,7 @@ export function useRoadIssues(
 
   return {
     issues,
+    clusters,
     filteredIssues: issues,
     isLoading,
     error,
@@ -194,12 +204,12 @@ export function useRoadIssues(
 }
 
 function rememberCacheEntry(
-  cache: Map<string, PublicRoadIssue[]>,
+  cache: Map<string, RoadIssueMapData>,
   key: string,
-  issues: PublicRoadIssue[],
+  data: RoadIssueMapData,
 ) {
   cache.delete(key);
-  cache.set(key, issues);
+  cache.set(key, data);
 
   if (cache.size <= MAX_CACHE_ENTRIES) {
     return;
@@ -210,6 +220,66 @@ function rememberCacheEntry(
   if (typeof oldestKey === "string") {
     cache.delete(oldestKey);
   }
+}
+
+function parseMapRows(rows: Record<string, unknown>[]): RoadIssueMapData {
+  const issues: PublicRoadIssue[] = [];
+  const clusters: RoadIssueMapCluster[] = [];
+
+  for (const row of rows) {
+    if (row.result_type === "cluster") {
+      const cluster = parseClusterRow(row);
+
+      if (cluster) {
+        clusters.push(cluster);
+      }
+
+      continue;
+    }
+
+    issues.push(withLocationFallback(row) as PublicRoadIssue);
+  }
+
+  return { clusters, issues };
+}
+
+function parseClusterRow(
+  row: Record<string, unknown>,
+): RoadIssueMapCluster | null {
+  const latitude = Number(row.latitude);
+  const longitude = Number(row.longitude);
+  const issueCount = Number(row.cluster_count);
+  const minLatitude = Number(row.cluster_min_latitude);
+  const minLongitude = Number(row.cluster_min_longitude);
+  const maxLatitude = Number(row.cluster_max_latitude);
+  const maxLongitude = Number(row.cluster_max_longitude);
+
+  if (
+    typeof row.cluster_id !== "string" ||
+    !Number.isFinite(latitude) ||
+    !Number.isFinite(longitude) ||
+    !Number.isInteger(issueCount) ||
+    issueCount < 1 ||
+    !Number.isFinite(minLatitude) ||
+    !Number.isFinite(minLongitude) ||
+    !Number.isFinite(maxLatitude) ||
+    !Number.isFinite(maxLongitude)
+  ) {
+    return null;
+  }
+
+  return {
+    bounds: {
+      maxLatitude,
+      maxLongitude,
+      minLatitude,
+      minLongitude,
+    },
+    id: row.cluster_id,
+    issueCount,
+    latitude,
+    longitude,
+  };
 }
 
 function withLocationFallback(issue: Record<string, unknown>) {
