@@ -32,7 +32,14 @@ export function IssuesPage() {
   const initialRankingType = parseRankingType(searchParams.get("tab"));
   const [rankingType, setRankingType] =
     useState<PublicIssueRankingType>(initialRankingType);
-  const { error, isLoading, rankings } = usePublicIssueRankings(rankingType);
+  const {
+    error,
+    hasMore,
+    isLoading,
+    isLoadingMore,
+    loadMore,
+    rankings,
+  } = usePublicIssueRankings(rankingType, { pageSize: 12 });
   const activeTab = getIssueRankingTab(rankingType);
 
   return (
@@ -132,6 +139,17 @@ export function IssuesPage() {
                 />
               ))}
             </div>
+          ) : null}
+
+          {!isLoading && !error && hasMore ? (
+            <button
+              className="mx-auto min-h-11 rounded-full border border-slate-200 bg-white/75 px-5 text-sm font-semibold text-ink shadow-sm transition hover:bg-white disabled:cursor-wait disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-road-blue"
+              disabled={isLoadingMore}
+              onClick={() => void loadMore()}
+              type="button"
+            >
+              {isLoadingMore ? "Yükleniyor..." : "Daha fazla göster"}
+            </button>
           ) : null}
         </div>
       </main>

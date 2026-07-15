@@ -34,8 +34,9 @@ export function IssueRankingPreview({
   onIssueSelect,
   onRankingTypeChange,
 }: IssueRankingPreviewProps) {
-  const { error, isLoading, rankings } = usePublicIssueRankings(rankingType);
-  const previewIssues = rankings.slice(0, 5);
+  const { error, isLoading, rankings } = usePublicIssueRankings(rankingType, {
+    pageSize: 5,
+  });
 
   return (
     <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[715] p-3 pb-[max(12px,env(safe-area-inset-bottom))] md:bottom-5 md:left-auto md:right-5 md:top-28 md:w-[370px] md:p-0">
@@ -114,14 +115,14 @@ export function IssueRankingPreview({
             </p>
           ) : null}
 
-          {!isLoading && !error && previewIssues.length === 0 ? (
+          {!isLoading && !error && rankings.length === 0 ? (
             <p className="rounded-2xl border border-slate-200 bg-white/62 px-3 py-3 text-sm text-ink-muted">
               Bu listede gösterilecek yol sorunu yok.
             </p>
           ) : null}
 
           {!isLoading && !error
-            ? previewIssues.map((issue, index) => (
+            ? rankings.map((issue, index) => (
                 <PreviewIssueItem
                   index={index}
                   issue={issue}

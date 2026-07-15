@@ -1,205 +1,193 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { calculateOpenDays } from "@/lib/road-issues/intensity";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type {
+  RoadIssueCategory,
+  RoadIssueStatus,
+} from "@/lib/domain/road-issue-options";
 import type {
   PublicIssueRankingRow,
   PublicIssueRankingType,
 } from "@/lib/road-issues/types";
 import { createOptionalClient } from "@/lib/supabase/browser";
 
+type UsePublicIssueRankingsOptions = {
+  category?: RoadIssueCategory | null;
+  pageSize?: number;
+  status?: RoadIssueStatus | null;
+};
+
 type UsePublicIssueRankingsResult = {
   error: string | null;
+  hasMore: boolean;
   isLoading: boolean;
+  isLoadingMore: boolean;
+  loadMore: () => Promise<void>;
   rankings: PublicIssueRankingRow[];
   refetch: () => Promise<PublicIssueRankingRow[]>;
 };
 
-const ROAD_ISSUE_COLUMNS =
-  "id, latitude, longitude, city, district, neighborhood, location_label, category, severity, status, first_reported_at, last_verified_at, verification_count, damage_count, solved_count, false_report_count, reporter_count, watcher_count, severity_score_avg, created_at, updated_at";
-const FALLBACK_ROAD_ISSUE_COLUMNS =
-  "id, latitude, longitude, category, severity, status, first_reported_at, last_verified_at, verification_count, damage_count, solved_count, false_report_count, reporter_count, severity_score_avg, created_at, updated_at";
-
 export function usePublicIssueRankings(
   rankingType: PublicIssueRankingType,
+  options: UsePublicIssueRankingsOptions = {},
 ): UsePublicIssueRankingsResult {
-  const [issues, setIssues] = useState<PublicIssueRankingRow[]>([]);
+  const supabase = useMemo(() => createOptionalClient(), []);
+  const pageSize = Math.max(1, Math.min(options.pageSize ?? 12, 50));
+  const category = options.category ?? null;
+  const status = options.status ?? null;
+  const [rankings, setRankings] = useState<PublicIssueRankingRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const requestSequenceRef = useRef(0);
 
-  const loadIssues = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
+  const fetchPage = useCallback(
+    async (offset: number, append: boolean) => {
+      const requestSequence = ++requestSequenceRef.current;
 
-    const supabase = createOptionalClient();
+      if (append) {
+        setIsLoadingMore(true);
+      } else {
+        setIsLoading(true);
+        setRankings([]);
+      }
+      setError(null);
 
-    if (!supabase) {
-      setIssues([]);
-      setError(
-        "Supabase bağlantısı için NEXT_PUBLIC_SUPABASE_URL ve NEXT_PUBLIC_SUPABASE_ANON_KEY gerekli.",
-      );
-      setIsLoading(false);
-      return [];
-    }
-
-    const result = await supabase
-      .from("road_issue_public_stats")
-      .select(ROAD_ISSUE_COLUMNS);
-    let rows = result.data as Record<string, unknown>[] | null;
-    let queryError = result.error;
-
-    if (queryError && isMissingLocationColumnError(queryError.message)) {
-      const fallbackResult = await supabase
-        .from("road_issue_public_stats")
-        .select(FALLBACK_ROAD_ISSUE_COLUMNS);
-
-      rows = fallbackResult.data as Record<string, unknown>[] | null;
-      queryError = fallbackResult.error;
-    }
-
-    if (queryError) {
-      if (process.env.NODE_ENV === "development") {
-        console.error("road_issue_public_stats query error", queryError);
+      if (!supabase) {
+        setHasMore(false);
+        setError(
+          "Supabase bağlantısı için NEXT_PUBLIC_SUPABASE_URL ve NEXT_PUBLIC_SUPABASE_ANON_KEY gerekli.",
+        );
+        setIsLoading(false);
+        setIsLoadingMore(false);
+        return [];
       }
 
-      setIssues([]);
-      setError("Yol sorunları yüklenirken bir hata oluştu.");
+      const { data, error: rpcError } = await supabase.rpc(
+        "get_paginated_issues",
+        {
+          p_category: category,
+          p_limit: pageSize,
+          p_offset: offset,
+          p_sort_by: toDatabaseSort(rankingType),
+          p_status: status,
+        },
+      );
+
+      if (requestSequence !== requestSequenceRef.current) {
+        return [];
+      }
+
+      if (rpcError) {
+        if (process.env.NODE_ENV === "development") {
+          console.error("get_paginated_issues RPC error", rpcError);
+        }
+
+        setHasMore(false);
+        setError("Yol sorunları yüklenirken bir hata oluştu.");
+        setIsLoading(false);
+        setIsLoadingMore(false);
+        return [];
+      }
+
+      const rows = parseRankingRows(data);
+      setRankings((current) => (append ? [...current, ...rows] : rows));
+      setHasMore(rows.length === pageSize);
       setIsLoading(false);
-      return [];
-    }
-
-    const loadedIssues = (rows ?? []).map((issue) => ({
-      ...withLocationFallback(issue),
-      open_days: calculateOpenDays(String(issue.first_reported_at ?? "")),
-    })) as PublicIssueRankingRow[];
-
-    setIssues(loadedIssues);
-    setError(null);
-    setIsLoading(false);
-    return loadedIssues;
-  }, []);
+      setIsLoadingMore(false);
+      return rows;
+    },
+    [category, pageSize, rankingType, status, supabase],
+  );
 
   useEffect(() => {
-    void loadIssues();
-  }, [loadIssues]);
+    void fetchPage(0, false);
+  }, [fetchPage]);
 
-  const rankings = useMemo(() => {
-    return rankIssues(issues, rankingType).slice(0, 50);
-  }, [issues, rankingType]);
+  const loadMore = useCallback(async () => {
+    if (isLoading || isLoadingMore || !hasMore) {
+      return;
+    }
+
+    await fetchPage(rankings.length, true);
+  }, [fetchPage, hasMore, isLoading, isLoadingMore, rankings.length]);
+
+  const refetch = useCallback(async () => fetchPage(0, false), [fetchPage]);
 
   return {
     error,
+    hasMore,
     isLoading,
+    isLoadingMore,
+    loadMore,
     rankings,
-    refetch: loadIssues,
+    refetch,
   };
 }
 
-function withLocationFallback(issue: Record<string, unknown>) {
-  return {
-    ...issue,
-    city: typeof issue.city === "string" ? issue.city : null,
-    district: typeof issue.district === "string" ? issue.district : null,
-    location_label:
-      typeof issue.location_label === "string" ? issue.location_label : null,
-    neighborhood:
-      typeof issue.neighborhood === "string" ? issue.neighborhood : null,
-    watcher_count:
-      typeof issue.watcher_count === "number" ? issue.watcher_count : 0,
-  };
+function toDatabaseSort(rankingType: PublicIssueRankingType) {
+  return rankingType === "recently_added" ? "newest" : rankingType;
 }
 
-function isMissingLocationColumnError(message: string) {
-  return (
-    message.includes("city") ||
-    message.includes("district") ||
-    message.includes("neighborhood") ||
-    message.includes("location_label") ||
-    message.includes("watcher_count")
-  );
-}
-
-function rankIssues(
-  issues: PublicIssueRankingRow[],
-  rankingType: PublicIssueRankingType,
-) {
-  const rankingIssues = issues.filter((issue) => {
-    if (rankingType === "most_verified") {
-      return issue.verification_count > 0;
-    }
-
-    if (rankingType === "most_damage") {
-      return issue.damage_count > 0;
-    }
-
-    if (rankingType === "recently_verified") {
-      return Boolean(issue.last_verified_at);
-    }
-
-    return true;
-  });
-
-  return rankingIssues.sort((left, right) => {
-    if (rankingType === "most_reported") {
-      return compareNumbers(
-        right.reporter_count,
-        left.reporter_count,
-        right.updated_at,
-        left.updated_at,
-      );
-    }
-
-    if (rankingType === "most_verified") {
-      return compareNumbers(
-        right.verification_count,
-        left.verification_count,
-        right.last_verified_at,
-        left.last_verified_at,
-      );
-    }
-
-    if (rankingType === "most_damage") {
-      return compareNumbers(
-        right.damage_count,
-        left.damage_count,
-        right.updated_at,
-        left.updated_at,
-      );
-    }
-
-    if (rankingType === "longest_open") {
-      return compareNumbers(
-        right.open_days,
-        left.open_days,
-        left.first_reported_at,
-        right.first_reported_at,
-      );
-    }
-
-    if (rankingType === "recently_verified") {
-      return compareDates(right.last_verified_at, left.last_verified_at);
-    }
-
-    return compareDates(right.created_at, left.created_at);
-  });
-}
-
-function compareNumbers(
-  rightValue: number,
-  leftValue: number,
-  rightTieDate: string | null,
-  leftTieDate: string | null,
-) {
-  if (rightValue !== leftValue) {
-    return rightValue - leftValue;
+function parseRankingRows(value: unknown): PublicIssueRankingRow[] {
+  if (!Array.isArray(value)) {
+    return [];
   }
 
-  return compareDates(rightTieDate, leftTieDate);
+  return value.flatMap((item) => {
+    if (!item || typeof item !== "object") {
+      return [];
+    }
+
+    const row = item as Record<string, unknown>;
+
+    if (
+      typeof row.id !== "string" ||
+      typeof row.category !== "string" ||
+      typeof row.severity !== "string" ||
+      typeof row.status !== "string" ||
+      typeof row.first_reported_at !== "string" ||
+      typeof row.created_at !== "string" ||
+      typeof row.updated_at !== "string"
+    ) {
+      return [];
+    }
+
+    return [
+      {
+        category: row.category as PublicIssueRankingRow["category"],
+        city: textOrNull(row.city),
+        created_at: row.created_at,
+        damage_count: numberField(row.damage_count),
+        district: textOrNull(row.district),
+        false_report_count: numberField(row.false_report_count),
+        first_reported_at: row.first_reported_at,
+        id: row.id,
+        last_verified_at: textOrNull(row.last_verified_at),
+        latitude: numberField(row.latitude),
+        location_label: textOrNull(row.location_label),
+        longitude: numberField(row.longitude),
+        neighborhood: textOrNull(row.neighborhood),
+        open_days: numberField(row.open_days),
+        reporter_count: numberField(row.reporter_count),
+        severity: row.severity as PublicIssueRankingRow["severity"],
+        severity_score_avg: numberField(row.severity_score_avg),
+        solved_count: numberField(row.solved_count),
+        status: row.status as PublicIssueRankingRow["status"],
+        updated_at: row.updated_at,
+        verification_count: numberField(row.verification_count),
+        watcher_count: numberField(row.watcher_count),
+      },
+    ];
+  });
 }
 
-function compareDates(rightDate: string | null, leftDate: string | null) {
-  const rightTime = rightDate ? new Date(rightDate).getTime() : 0;
-  const leftTime = leftDate ? new Date(leftDate).getTime() : 0;
+function numberField(value: unknown) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
 
-  return rightTime - leftTime;
+function textOrNull(value: unknown) {
+  return typeof value === "string" ? value : null;
 }
