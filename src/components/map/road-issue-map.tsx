@@ -16,6 +16,11 @@ import { IssueSidePanel } from "@/components/map/issue-side-panel";
 import { LeaderboardPreview } from "@/components/map/leaderboard-preview";
 import { MapAddClickHandler } from "@/components/map/map-add-click-handler";
 import { MapControlBar } from "@/components/map/map-control-bar";
+import {
+  FlyToCoordinator,
+  type MapFlyToTarget,
+} from "@/components/map/map-fly-to";
+import { MapSearchBar } from "@/components/map/map-search-bar";
 import { MapStatusOverlay } from "@/components/map/map-status-overlay";
 import { ProfilePreview } from "@/components/map/profile-preview";
 import { RoadIssueClusterMarker } from "@/components/map/road-issue-cluster-marker";
@@ -75,6 +80,8 @@ export function RoadIssueMap() {
   );
   const [currentLocation, setCurrentLocation] =
     useState<BrowserLocation | null>(null);
+  const [searchFlyToTarget, setSearchFlyToTarget] =
+    useState<MapFlyToTarget | null>(null);
   const [isAddMode, setIsAddMode] = useState(false);
   const [selectedLocation, setSelectedLocation] =
     useState<SelectedRoadIssueLocation | null>(null);
@@ -819,6 +826,17 @@ export function RoadIssueMap() {
     setLocationMessage("Bildirimin geri çekildi.");
   }
 
+  function handleAddressSearchSelect(target: MapFlyToTarget) {
+    setSearchFlyToTarget({ ...target });
+    setSelectedIssue(null);
+    setIsFilterOpen(false);
+    setIsAuthPanelOpen(false);
+    setIsIssueRankingPreviewOpen(false);
+    setIsLeaderboardPreviewOpen(false);
+    setIsProfilePreviewOpen(false);
+    handleCancelAddIssue();
+  }
+
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key !== "Escape") {
@@ -893,6 +911,7 @@ export function RoadIssueMap() {
           />
           <MapViewportObserver onChange={handleViewportChange} />
           <MapKeyboardFocus />
+          <FlyToCoordinator target={searchFlyToTarget} />
           <MapAddClickHandler
             enabled={isAddMode && authStatus === "authenticated"}
             onSelectLocation={handleSelectIssueLocation}
@@ -989,6 +1008,8 @@ export function RoadIssueMap() {
           userEmail={userEmail}
           visibleCount={visibleMapIssueCount}
         />
+
+        <MapSearchBar onSelect={handleAddressSearchSelect} />
 
         <nav
           aria-label="Yasal ve iletişim bağlantıları"
