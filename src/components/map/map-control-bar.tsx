@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { MagicLinkForm } from "@/components/auth/magic-link-form";
+import { AnimatedScore } from "@/components/gamification/animated-score";
 import { ActiveFilterSummary } from "@/components/map/active-filter-summary";
 import { FilterSheet } from "@/components/map/filter-sheet";
 import { FloatingMapButton } from "@/components/map/floating-map-button";
@@ -165,7 +166,15 @@ export function MapControlBar({
                   <span className="block truncate text-xs font-semibold leading-4 text-ink">
                     {isAccountSummaryLoading
                       ? "Hesap"
-                      : `${accountSummary.levelLabel} · ${accountSummary.confirmedPoints} puan`}
+                      : (
+                          <>
+                            {accountSummary.levelLabel} ·{" "}
+                            <AnimatedScore
+                              value={accountSummary.confirmedPoints}
+                            />{" "}
+                            puan
+                          </>
+                        )}
                   </span>
                   <span className="block truncate text-[11px] leading-4 text-ink-muted">
                     {shortenEmail(userEmail)}
@@ -203,7 +212,11 @@ export function MapControlBar({
                 >
                   {isAccountSummaryLoading
                     ? "..."
-                    : `${accountSummary.confirmedPoints}`}
+                    : (
+                        <AnimatedScore
+                          value={accountSummary.confirmedPoints}
+                        />
+                      )}
                 </button>
                 <FloatingMapButton
                   aria-label="Çıkış yap"

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { MapContainer, TileLayer, useMap, useMapEvents } from "react-leaflet";
 import type { Map as LeafletMap } from "leaflet";
+import { RewardAlert } from "@/components/gamification/reward-alert";
 import { AppShell } from "@/components/layout/app-shell";
 import { OnboardingModal } from "@/components/onboarding/onboarding-modal";
 import { AddIssuePanel } from "@/components/map/add-issue-panel";
@@ -25,11 +26,14 @@ import {
   useRoadIssues,
   type RoadIssueMapViewport,
 } from "@/hooks/use-road-issues";
-import type {
-  RoadIssueCategory,
-  RoadIssueSeverity,
+import {
+  roadIssueStatuses,
+  type RoadIssueCategory,
+  type RoadIssueSeverity,
 } from "@/lib/domain/road-issue-options";
-import type { BrowserLocation } from "@/lib/geo/location";
+import type {
+  BrowserLocation,
+} from "@/lib/geo/location";
 import {
   calculateDistanceMeters,
   getCurrentPosition,
@@ -38,7 +42,9 @@ import {
 import type { LeaderboardPeriod } from "@/lib/leaderboard/types";
 import type {
   CreateIssueOrMergeDuplicateResult,
+  DynamicRewardBonus,
   IssueActionFeedback,
+  IssueActionRpcResult,
   IssueActionType,
   IssueUserState,
   PublicIssueRankingType,
@@ -102,6 +108,10 @@ export function RoadIssueMap() {
   const [isIssueActionAuthPromptVisible, setIsIssueActionAuthPromptVisible] =
     useState(false);
   const [locationMessage, setLocationMessage] = useState<string | null>(null);
+  const [rewardAlert, setRewardAlert] = useState<{
+    bonus: DynamicRewardBonus;
+    finalScore: number | null;
+  } | null>(null);
   const mapRef = useRef<LeafletMap | null>(null);
   const handledIssueParamRef = useRef<string | null>(null);
   const [mapViewport, setMapViewport] =
@@ -139,6 +149,10 @@ export function RoadIssueMap() {
     },
     [],
   );
+
+  const dismissRewardAlert = useCallback(() => {
+    setRewardAlert(null);
+  }, []);
 
   useEffect(() => {
     if (!supabase) {
@@ -613,6 +627,7 @@ export function RoadIssueMap() {
 
     setLoadingIssueAction(action);
     setIssueActionFeedback(null);
+    setRewardAlert(null);
     setIsIssueActionAuthPromptVisible(false);
 
     const isToggleOffAction =
@@ -654,11 +669,14 @@ export function RoadIssueMap() {
       }
     }
 
-    const { data: rpcData, error: rpcError } = await supabase.rpc(getRpcName(action), {
-      p_issue_id: issue.id,
-      p_latitude: location.latitude,
-      p_longitude: location.longitude,
-    });
+    const { data: rpcData, error: rpcError } = await supabase.rpc(
+      getRpcName(action),
+      {
+        p_issue_id: issue.id,
+        p_latitude: location.latitude,
+        p_longitude: location.longitude,
+      },
+    );
 
     if (rpcError) {
       if (process.env.NODE_ENV === "development") {
@@ -671,6 +689,51 @@ export function RoadIssueMap() {
         tone: "error",
       });
       return;
+    }
+
+    const rpcResult = parseIssueActionRpcResult(rpcData);
+    let appliedReward =
+      rpcResult?.applied_bonus &&
+      (action === "verify" || action === "solved") &&
+      !isToggleOffAction
+        ? {
+            bonus: rpcResult.applied_bonus,
+            finalScore: rpcResult.final_score,
+          }
+        : null;
+
+    if (
+      !appliedReward &&
+      !isToggleOffAction &&
+      (action === "verify" || action === "solved")
+    ) {
+      const eventType =
+        action === "verify"
+          ? "issue_verified_by_user"
+          : "issue_solved_reported_by_user";
+      const { data: scoreEvent, error: scoreEventError } = await supabase
+        .from("user_score_events")
+        .select("points, bonus_type, status, created_at")
+        .eq("issue_id", issue.id)
+        .eq("event_type", eventType)
+        .in("status", ["pending", "confirmed"])
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (scoreEventError) {
+        if (process.env.NODE_ENV === "development") {
+          console.warn("dynamic reward lookup error", scoreEventError);
+        }
+      } else {
+        const bonus = parseDynamicRewardBonus(scoreEvent?.bonus_type);
+        if (bonus) {
+          appliedReward = {
+            bonus,
+            finalScore: numberOrNull(scoreEvent?.points),
+          };
+        }
+      }
     }
 
     const latestIssues = await refetch();
@@ -689,6 +752,11 @@ export function RoadIssueMap() {
       tone: "success",
     });
     setIssueUserState(await loadIssueUserState(issue.id));
+    await loadAccountSummary();
+
+    if (appliedReward) {
+      setRewardAlert(appliedReward);
+    }
   }
 
   async function handleWithdrawIssueReport(issue: PublicRoadIssue) {
@@ -1032,6 +1100,13 @@ export function RoadIssueMap() {
             />
           </>
         ) : null}
+        {rewardAlert ? (
+          <RewardAlert
+            bonus={rewardAlert.bonus}
+            finalScore={rewardAlert.finalScore}
+            onDismiss={dismissRewardAlert}
+          />
+        ) : null}
         <OnboardingModal />
       </main>
     </AppShell>
@@ -1159,6 +1234,42 @@ function getIssueActionResultMessage(value: unknown) {
   const message = (result as Record<string, unknown>).message;
 
   return typeof message === "string" && message.length > 0 ? message : null;
+}
+
+function parseIssueActionRpcResult(value: unknown): IssueActionRpcResult | null {
+  const result = Array.isArray(value) ? value[0] : value;
+  if (!result || typeof result !== "object") return null;
+
+  const record = result as Record<string, unknown>;
+  if (
+    typeof record.issue_id !== "string" ||
+    typeof record.status !== "string" ||
+    !roadIssueStatuses.includes(
+      record.status as (typeof roadIssueStatuses)[number],
+    )
+  ) {
+    return null;
+  }
+
+  return {
+    applied_bonus: parseDynamicRewardBonus(record.applied_bonus),
+    distance_to_issue_meters: numberOrNull(record.distance_to_issue_meters),
+    final_score: numberOrNull(record.final_score),
+    issue_id: record.issue_id,
+    message: typeof record.message === "string" ? record.message : null,
+    report_id: typeof record.report_id === "string" ? record.report_id : null,
+    status: record.status as IssueActionRpcResult["status"],
+  };
+}
+
+function parseDynamicRewardBonus(value: unknown): DynamicRewardBonus | null {
+  return value === "CRITICAL_HIT" || value === "COLD_CASE" ? value : null;
+}
+
+function numberOrNull(value: unknown): number | null {
+  if (value === null || value === undefined) return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
 }
 
 function getProximityMessage(action: IssueActionType) {

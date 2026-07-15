@@ -1,4 +1,5 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
+import { PwaRegistrar } from "@/components/pwa-registrar";
 import "leaflet/dist/leaflet.css";
 import "./globals.css";
 
@@ -13,6 +14,11 @@ export const metadata: Metadata = {
   description:
     "Şehrinizdeki çukur, bozuk yol ve altyapı sorunlarını harita üzerinde bildirin, topluluk doğrulamasıyla çözüme kavuşturun.",
   applicationName: "YolDurumu",
+  appleWebApp: {
+    capable: true,
+    title: "YolDurumu",
+    statusBarStyle: "black-translucent",
+  },
   keywords: [
     "yol sorunları",
     "çukur bildirimi",
@@ -56,6 +62,10 @@ export const metadata: Metadata = {
   },
 };
 
+export const viewport: Viewport = {
+  themeColor: "#000000",
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -63,7 +73,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="tr">
-      <body>{children}</body>
+      <body>
+        {children}
+        <PwaRegistrar />
+      </body>
     </html>
   );
 }

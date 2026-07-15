@@ -5,6 +5,8 @@ import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, ExternalLink, LogOut, MapPin } from "lucide-react";
 import { MagicLinkForm } from "@/components/auth/magic-link-form";
+import { AnimatedScore } from "@/components/gamification/animated-score";
+import { StreakBadge } from "@/components/gamification/streak-badge";
 import { UserRankBadge } from "@/components/gamification/user-rank-badge";
 import { AppShell } from "@/components/layout/app-shell";
 import { GlassPanel } from "@/components/map/glass-panel";
@@ -91,6 +93,8 @@ export function ProfilePage() {
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [currentStreak, setCurrentStreak] = useState(0);
+  const [longestStreak, setLongestStreak] = useState(0);
   const [withdrawingIssueId, setWithdrawingIssueId] = useState<string | null>(
     null,
   );
@@ -157,12 +161,24 @@ export function ProfilePage() {
     setIsLoadingProfile(true);
     setProfileError(null);
 
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    const streakRequest = user
+      ? supabase
+          .from("profiles")
+          .select("current_streak_days, longest_streak_days")
+          .eq("id", user.id)
+          .maybeSingle()
+      : Promise.resolve({ data: null, error: null });
+
     const [
       { data: summaryData, error: summaryError },
       { data: entriesData, error: entriesError },
       { data: watchedData, error: watchedError },
       dashboardData,
       scoreData,
+      streakResult,
     ] =
       await Promise.all([
         supabase.rpc("get_my_profile_summary"),
@@ -170,10 +186,22 @@ export function ProfilePage() {
         supabase.rpc("get_my_watched_issues"),
         loadDashboard(),
         loadScore(),
+        streakRequest,
       ]);
 
     void dashboardData;
     void scoreData;
+
+    if (streakResult.error) {
+      if (process.env.NODE_ENV === "development") {
+        console.warn("profile streak query error", streakResult.error);
+      }
+      setCurrentStreak(0);
+      setLongestStreak(0);
+    } else {
+      setCurrentStreak(numberField(streakResult.data?.current_streak_days));
+      setLongestStreak(numberField(streakResult.data?.longest_streak_days));
+    }
 
     if (watchedError && process.env.NODE_ENV === "development") {
       console.error("get_my_watched_issues RPC error", watchedError);
@@ -333,6 +361,8 @@ export function ProfilePage() {
     setSummary(emptySummary);
     setEntries([]);
     setWatchedIssues([]);
+    setCurrentStreak(0);
+    setLongestStreak(0);
     resetDashboard();
     resetScore();
     setFeedback("Çıkış yapıldı.");
@@ -461,8 +491,10 @@ export function ProfilePage() {
                 isLoading={isLoadingDashboard}
               />
               <CivicScorePanel
+                currentStreak={currentStreak}
                 events={scoreEvents}
                 isLoading={isLoadingScore}
+                longestStreak={longestStreak}
                 summary={scoreSummary}
               />
               <ProfileTabs
@@ -690,12 +722,16 @@ function ImpactLine({ label, text }: { label: string; text: string }) {
 }
 
 function CivicScorePanel({
+  currentStreak,
   events,
   isLoading,
+  longestStreak,
   summary,
 }: {
+  currentStreak: number;
   events: CivicScoreEvent[];
   isLoading: boolean;
+  longestStreak: number;
   summary: CivicScoreSummary;
 }) {
   return (
@@ -727,7 +763,16 @@ function CivicScorePanel({
 
       <div className="mt-4 grid gap-2 md:grid-cols-3">
         <ScoreMetricCard
-          badge={<UserRankBadge score={summary.confirmed_points} />}
+          badge={
+            <span className="flex flex-wrap items-center gap-1.5">
+              <UserRankBadge score={summary.confirmed_points} />
+              <StreakBadge
+                currentStreak={currentStreak}
+                longestStreak={longestStreak}
+              />
+            </span>
+          }
+          animate
           helper="Kalıcı katkı puanın."
           label="Kesinleşmiş puan"
           value={summary.confirmed_points}
@@ -782,11 +827,13 @@ function CivicScorePanel({
 }
 
 function ScoreMetricCard({
+  animate = false,
   badge,
   helper,
   label,
   value,
 }: {
+  animate?: boolean;
   badge?: ReactNode;
   helper: string;
   label: string;
@@ -796,7 +843,9 @@ function ScoreMetricCard({
     <div className="rounded-2xl border border-slate-200 bg-white/62 p-3">
       <p className="text-xs font-semibold uppercase text-ink-subtle">{label}</p>
       <div className="mt-1 flex flex-wrap items-center gap-2">
-        <p className="text-2xl font-semibold text-ink">{value}</p>
+        <p className="text-2xl font-semibold text-ink">
+          {animate ? <AnimatedScore value={value} /> : value}
+        </p>
         {badge}
       </div>
       <p className="mt-1 text-xs leading-5 text-ink-muted">{helper}</p>

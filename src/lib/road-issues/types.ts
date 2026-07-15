@@ -86,6 +86,18 @@ export type IssueActionFeedback = {
   tone: "error" | "success";
 };
 
+export type DynamicRewardBonus = "CRITICAL_HIT" | "COLD_CASE";
+
+export type IssueActionRpcResult = {
+  issue_id: string;
+  report_id: string | null;
+  status: RoadIssueStatus;
+  distance_to_issue_meters: number | null;
+  message: string | null;
+  final_score: number | null;
+  applied_bonus: DynamicRewardBonus | null;
+};
+
 export type IssueUserState = {
   issue_id: string;
   has_active_report: boolean;
