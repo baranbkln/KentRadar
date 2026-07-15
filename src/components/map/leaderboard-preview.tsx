@@ -2,6 +2,7 @@
 
 import { ArrowLeft, Check, ExternalLink, Trophy, X } from "lucide-react";
 import Link from "next/link";
+import { UserRankBadge } from "@/components/gamification/user-rank-badge";
 import { GlassPanel } from "@/components/map/glass-panel";
 import { useLeaderboard } from "@/hooks/use-leaderboard";
 import {
@@ -162,9 +163,12 @@ function LeaderboardPreviewItem({
                 </span>
               ) : null}
             </div>
-            <p className="mt-0.5 text-xs font-semibold text-ink-muted">
-              {row.level_label}
-            </p>
+            <UserRankBadge
+              className="mt-0.5"
+              compact
+              score={row.points}
+              showInfo={false}
+            />
           </div>
         </div>
         <Trophy className="size-4 shrink-0 text-amber-600" />

@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { MapContainer, TileLayer, useMap, useMapEvents } from "react-leaflet";
 import type { Map as LeafletMap } from "leaflet";
 import { AppShell } from "@/components/layout/app-shell";
+import { OnboardingModal } from "@/components/onboarding/onboarding-modal";
 import { AddIssuePanel } from "@/components/map/add-issue-panel";
 import { CurrentLocationMarker } from "@/components/map/current-location-marker";
 import { IssueBottomSheet } from "@/components/map/issue-bottom-sheet";
@@ -1031,6 +1032,7 @@ export function RoadIssueMap() {
             />
           </>
         ) : null}
+        <OnboardingModal />
       </main>
     </AppShell>
   );

@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, ExternalLink, LogOut, MapPin } from "lucide-react";
 import { MagicLinkForm } from "@/components/auth/magic-link-form";
+import { UserRankBadge } from "@/components/gamification/user-rank-badge";
 import { AppShell } from "@/components/layout/app-shell";
 import { GlassPanel } from "@/components/map/glass-panel";
 import { useCivicDashboard } from "@/hooks/use-civic-dashboard";
@@ -725,6 +727,7 @@ function CivicScorePanel({
 
       <div className="mt-4 grid gap-2 md:grid-cols-3">
         <ScoreMetricCard
+          badge={<UserRankBadge score={summary.confirmed_points} />}
           helper="Kalıcı katkı puanın."
           label="Kesinleşmiş puan"
           value={summary.confirmed_points}
@@ -779,10 +782,12 @@ function CivicScorePanel({
 }
 
 function ScoreMetricCard({
+  badge,
   helper,
   label,
   value,
 }: {
+  badge?: ReactNode;
   helper: string;
   label: string;
   value: number;
@@ -790,7 +795,10 @@ function ScoreMetricCard({
   return (
     <div className="rounded-2xl border border-slate-200 bg-white/62 p-3">
       <p className="text-xs font-semibold uppercase text-ink-subtle">{label}</p>
-      <p className="mt-1 text-2xl font-semibold text-ink">{value}</p>
+      <div className="mt-1 flex flex-wrap items-center gap-2">
+        <p className="text-2xl font-semibold text-ink">{value}</p>
+        {badge}
+      </div>
       <p className="mt-1 text-xs leading-5 text-ink-muted">{helper}</p>
     </div>
   );

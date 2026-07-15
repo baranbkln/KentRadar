@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { ArrowLeft, Medal, ShieldCheck } from "lucide-react";
+import { UserRankBadge } from "@/components/gamification/user-rank-badge";
 import { AppShell } from "@/components/layout/app-shell";
 import { GlassPanel } from "@/components/map/glass-panel";
 import { useLeaderboard } from "@/hooks/use-leaderboard";
@@ -158,9 +159,7 @@ function LeaderboardCard({ row }: { row: LeaderboardRow }) {
                 </span>
               ) : null}
             </div>
-            <p className="mt-1 text-sm font-semibold text-ink-muted">
-              {row.level_label}
-            </p>
+            <UserRankBadge className="mt-1" compact score={row.points} />
           </div>
         </div>
         <ShieldCheck className="size-5 shrink-0 text-emerald-600" />
