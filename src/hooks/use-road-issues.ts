@@ -108,43 +108,58 @@ export function useRoadIssues(
         return [];
       }
 
-      const { data, error: rpcError } = await supabase.rpc(
-        "get_public_issues_in_bbox",
-        {
-          p_category_filter: categoryFilter || null,
-          p_max_lat: viewport.maxLatitude,
-          p_max_lng: viewport.maxLongitude,
-          p_min_lat: viewport.minLatitude,
-          p_min_lng: viewport.minLongitude,
-          p_status_filter: statusFilter || null,
-          p_zoom: viewport.zoom,
-        },
-      );
+      try {
+        const { data, error: rpcError } = await supabase.rpc(
+          "get_public_issues_in_bbox",
+          {
+            p_category_filter: categoryFilter || null,
+            p_max_lat: viewport.maxLatitude,
+            p_max_lng: viewport.maxLongitude,
+            p_min_lat: viewport.minLatitude,
+            p_min_lng: viewport.minLongitude,
+            p_status_filter: statusFilter || null,
+            p_zoom: viewport.zoom,
+          },
+        );
 
-      if (requestSequence !== requestSequenceRef.current) {
-        return issuesRef.current;
-      }
-
-      if (rpcError) {
-        if (process.env.NODE_ENV === "development") {
-          console.error("get_public_issues_in_bbox RPC error", rpcError);
+        if (requestSequence !== requestSequenceRef.current) {
+          return issuesRef.current;
         }
 
-        commitMapData({ clusters: [], issues: [] });
-        setError("Yol sorunları yüklenemedi. Lütfen tekrar dene.");
-        setIsLoading(false);
+        if (rpcError) {
+          if (process.env.NODE_ENV === "development") {
+            console.error("get_public_issues_in_bbox RPC error", rpcError);
+          }
+
+          commitMapData({ clusters: [], issues: [] });
+          setError("Yol sorunları yüklenemedi. Lütfen tekrar dene.");
+          return [];
+        }
+
+        const loadedData = parseMapRows(
+          (data ?? []) as Record<string, unknown>[],
+        );
+
+        rememberCacheEntry(cacheRef.current, cacheKey, loadedData);
+        commitMapData(loadedData);
+        setError(null);
+        return loadedData.issues;
+      } catch (loadError) {
+        if (process.env.NODE_ENV === "development") {
+          console.error("Road issue map fetch failed", loadError);
+        }
+
+        if (requestSequence === requestSequenceRef.current) {
+          commitMapData({ clusters: [], issues: [] });
+          setError("Yol sorunları yüklenemedi. Lütfen tekrar dene.");
+        }
+
         return [];
+      } finally {
+        if (requestSequence === requestSequenceRef.current) {
+          setIsLoading(false);
+        }
       }
-
-      const loadedData = parseMapRows(
-        (data ?? []) as Record<string, unknown>[],
-      );
-
-      rememberCacheEntry(cacheRef.current, cacheKey, loadedData);
-      commitMapData(loadedData);
-      setError(null);
-      setIsLoading(false);
-      return loadedData.issues;
     },
     [cacheKey, categoryFilter, commitMapData, statusFilter, viewport],
   );
@@ -156,40 +171,48 @@ export function useRoadIssues(
   const refetch = useCallback(async () => loadIssues(true), [loadIssues]);
 
   const fetchIssueById = useCallback(async (issueId: string) => {
-    const supabase = createOptionalClient();
+    try {
+      const supabase = createOptionalClient();
 
-    if (!supabase) {
-      return null;
-    }
+      if (!supabase) {
+        return null;
+      }
 
-    const result = await supabase
-      .from("road_issue_public_stats")
-      .select(ROAD_ISSUE_COLUMNS)
-      .eq("id", issueId)
-      .maybeSingle();
-    let row = result.data as Record<string, unknown> | null;
-    let queryError = result.error;
-
-    if (queryError && isMissingLocationColumnError(queryError.message)) {
-      const fallbackResult = await supabase
+      const result = await supabase
         .from("road_issue_public_stats")
-        .select(FALLBACK_ROAD_ISSUE_COLUMNS)
+        .select(ROAD_ISSUE_COLUMNS)
         .eq("id", issueId)
         .maybeSingle();
+      let row = result.data as Record<string, unknown> | null;
+      let queryError = result.error;
 
-      row = fallbackResult.data as Record<string, unknown> | null;
-      queryError = fallbackResult.error;
-    }
+      if (queryError && isMissingLocationColumnError(queryError.message)) {
+        const fallbackResult = await supabase
+          .from("road_issue_public_stats")
+          .select(FALLBACK_ROAD_ISSUE_COLUMNS)
+          .eq("id", issueId)
+          .maybeSingle();
 
-    if (queryError) {
+        row = fallbackResult.data as Record<string, unknown> | null;
+        queryError = fallbackResult.error;
+      }
+
+      if (queryError) {
+        if (process.env.NODE_ENV === "development") {
+          console.error("road issue detail query error", queryError);
+        }
+
+        return null;
+      }
+
+      return row ? (withLocationFallback(row) as PublicRoadIssue) : null;
+    } catch (queryError) {
       if (process.env.NODE_ENV === "development") {
-        console.error("road issue detail query error", queryError);
+        console.error("Road issue detail fetch failed", queryError);
       }
 
       return null;
     }
-
-    return row ? (withLocationFallback(row) as PublicRoadIssue) : null;
   }, []);
 
   return {

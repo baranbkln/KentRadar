@@ -7,10 +7,6 @@ import { MapContainer, TileLayer, useMap, useMapEvents } from "react-leaflet";
 import type { Map as LeafletMap } from "leaflet";
 import { RewardAlert } from "@/components/gamification/reward-alert";
 import { LiveTicker } from "@/components/gamification/live-ticker";
-import {
-  ZoneController,
-  type ZoneControllerProps,
-} from "@/components/gamification/zone-controller";
 import { AppShell } from "@/components/layout/app-shell";
 import { OnboardingModal } from "@/components/onboarding/onboarding-modal";
 import { AddIssuePanel } from "@/components/map/add-issue-panel";
@@ -34,7 +30,6 @@ import { RoadIssueClusterMarker } from "@/components/map/road-issue-cluster-mark
 import { RoadIssueMarker } from "@/components/map/road-issue-marker";
 import { SelectedLocationMarker } from "@/components/map/selected-location-marker";
 import { useAccountSummary } from "@/hooks/use-account-summary";
-import { useLeaderboard } from "@/hooks/use-leaderboard";
 import {
   useRoadIssues,
   type RoadIssueMapViewport,
@@ -55,7 +50,6 @@ import {
 import { reverseGeocodeIssueLocation } from "@/lib/location/geocoding";
 import type {
   LeaderboardPeriod,
-  LeaderboardRow,
 } from "@/lib/leaderboard/types";
 import type {
   CreateIssueOrMergeDuplicateResult,
@@ -135,12 +129,6 @@ export function RoadIssueMap() {
   const handledIssueParamRef = useRef<string | null>(null);
   const [mapViewport, setMapViewport] =
     useState<RoadIssueMapViewport | null>(null);
-  const { rows: zoneLeaderboardRows } = useLeaderboard("all_time", 1);
-  const zoneLeaderboardLeader = zoneLeaderboardRows[0] ?? null;
-  const zoneController = useMemo(
-    () => getMockZoneController(mapViewport, zoneLeaderboardLeader),
-    [mapViewport, zoneLeaderboardLeader],
-  );
   const {
     issues,
     clusters,
@@ -536,83 +524,94 @@ export function RoadIssueMap() {
     setAddError(null);
     setAddSuccess(null);
 
-    const geocodedLocation = await reverseGeocodeIssueLocation(
-      selectedLocation.latitude,
-      selectedLocation.longitude,
-    );
+    try {
+      const geocodedLocation = await reverseGeocodeIssueLocation(
+        selectedLocation.latitude,
+        selectedLocation.longitude,
+      );
 
-    const { data, error: rpcError } = await supabase.rpc(
-      "create_issue_or_merge_duplicate",
-      {
-        p_category: category,
-        p_city: geocodedLocation?.city ?? null,
-        p_district: geocodedLocation?.district ?? null,
-        p_has_photo: false,
-        p_has_damage: hasDamage,
-        p_latitude: selectedLocation.latitude,
-        p_longitude: selectedLocation.longitude,
-        p_severity: severity,
-      },
-    );
+      const { data, error: rpcError } = await supabase.rpc(
+        "create_issue_or_merge_duplicate",
+        {
+          p_category: category,
+          p_city: geocodedLocation?.city ?? null,
+          p_district: geocodedLocation?.district ?? null,
+          p_has_photo: false,
+          p_has_damage: hasDamage,
+          p_latitude: selectedLocation.latitude,
+          p_longitude: selectedLocation.longitude,
+          p_severity: severity,
+        },
+      );
 
-    if (rpcError) {
+      if (rpcError) {
+        if (process.env.NODE_ENV === "development") {
+          console.error("create_issue_or_merge_duplicate RPC error", rpcError);
+        }
+
+        setAddError(mapCreateIssueError(rpcError.message));
+        return;
+      }
+
+      const result = parseCreateIssueResult(data);
+
+      if (!result) {
+        setAddError("Sorun bildirilirken bir hata oluştu. Lütfen tekrar dene.");
+        return;
+      }
+
+      const latestIssues = await refetch();
+      const reportedIssue =
+        latestIssues.find((issue) => issue.id === result.issue_id) ??
+        (await fetchIssueById(result.issue_id));
+      const successMessage = getCreateIssueSuccessMessage(
+        result,
+        accountSummary.confirmedPoints >= 1000,
+      );
+
+      let message = result.damage_report_added
+        ? `${successMessage} Araç hasarı bildirimi de eklendi.`
+        : successMessage;
+
+      if (reportedIssue) {
+        const isVisible = isIssueVisibleWithFilters(reportedIssue, filters);
+
+        if (!isVisible) {
+          setFilters({ categories: [], status: "all" });
+          message = `${successMessage} Kayıt görünür olsun diye filtreler temizlendi.`;
+        }
+
+        setSelectedIssue(reportedIssue);
+        mapRef.current?.flyTo(
+          [reportedIssue.latitude, reportedIssue.longitude],
+          17,
+          {
+            duration: 0.65,
+          },
+        );
+      } else {
+        mapRef.current?.flyTo([result.latitude, result.longitude], 17, {
+          duration: 0.65,
+        });
+      }
+
+      setIsAddMode(false);
+      setSelectedLocation(null);
+      setCategory("");
+      setSeverity("");
+      setHasDamage(false);
+      setAddSuccess(null);
+      setAddError(null);
+      setLocationMessage(message);
+    } catch (submitError) {
       if (process.env.NODE_ENV === "development") {
-        console.error("create_issue_or_merge_duplicate RPC error", rpcError);
+        console.error("Road issue submission failed", submitError);
       }
 
-      setIsSubmitting(false);
-      setAddError(mapCreateIssueError(rpcError.message));
-      return;
-    }
-
-    const result = parseCreateIssueResult(data);
-
-    if (!result) {
-      setIsSubmitting(false);
       setAddError("Sorun bildirilirken bir hata oluştu. Lütfen tekrar dene.");
-      return;
+    } finally {
+      setIsSubmitting(false);
     }
-
-    const latestIssues = await refetch();
-    const reportedIssue =
-      latestIssues.find((issue) => issue.id === result.issue_id) ??
-      (await fetchIssueById(result.issue_id));
-    const successMessage = getCreateIssueSuccessMessage(
-      result,
-      accountSummary.confirmedPoints >= 1000,
-    );
-
-    let message = result.damage_report_added
-      ? `${successMessage} Araç hasarı bildirimi de eklendi.`
-      : successMessage;
-
-    if (reportedIssue) {
-      const isVisible = isIssueVisibleWithFilters(reportedIssue, filters);
-
-      if (!isVisible) {
-        setFilters({ categories: [], status: "all" });
-        message = `${successMessage} Kayıt görünür olsun diye filtreler temizlendi.`;
-      }
-
-      setSelectedIssue(reportedIssue);
-      mapRef.current?.flyTo([reportedIssue.latitude, reportedIssue.longitude], 17, {
-        duration: 0.65,
-      });
-    } else {
-      mapRef.current?.flyTo([result.latitude, result.longitude], 17, {
-        duration: 0.65,
-      });
-    }
-
-    setIsSubmitting(false);
-    setIsAddMode(false);
-    setSelectedLocation(null);
-    setCategory("");
-    setSeverity("");
-    setHasDamage(false);
-    setAddSuccess(null);
-    setAddError(null);
-    setLocationMessage(message);
   }
 
   async function handleIssueAction(
@@ -1048,7 +1047,6 @@ export function RoadIssueMap() {
 
         <MapSearchBar onSelect={handleAddressSearchSelect} />
 
-        <ZoneController {...zoneController} />
 
         {authStatus === "authenticated" ? (
           <CommandCenterHud
@@ -1524,73 +1522,6 @@ function areViewportsEqual(
     left.maxLatitude.toFixed(5) === right.maxLatitude.toFixed(5) &&
     left.maxLongitude.toFixed(5) === right.maxLongitude.toFixed(5)
   );
-}
-
-type MockZoneController = Omit<ZoneControllerProps, "className">;
-
-const MOCK_ZONE_CONTROLLERS = [
-  {
-    latitude: 39.9334,
-    longitude: 32.8597,
-    districtName: "Çankaya",
-    topPlayerName: "Katkıcı #A93F",
-    playerRank: "Deneyimli Katkıcı",
-    playerScore: 1_260,
-    streakDays: 8,
-  },
-  {
-    latitude: 41.0082,
-    longitude: 28.9784,
-    districtName: "Kadıköy",
-    topPlayerName: "Katkıcı #7C21",
-    playerRank: "Güvenilir Katkıcı",
-    playerScore: 486,
-    streakDays: 5,
-  },
-  {
-    latitude: 38.4237,
-    longitude: 27.1428,
-    districtName: "Konak",
-    topPlayerName: "Katkıcı #D184",
-    playerRank: "Düzenli Katkıcı",
-    playerScore: 188,
-    streakDays: 3,
-  },
-] as const;
-
-function getMockZoneController(
-  viewport: RoadIssueMapViewport | null,
-  leaderboardLeader: LeaderboardRow | null,
-): MockZoneController {
-  const centerLatitude = viewport
-    ? (viewport.minLatitude + viewport.maxLatitude) / 2
-    : ANKARA_CENTER[0];
-  const centerLongitude = viewport
-    ? (viewport.minLongitude + viewport.maxLongitude) / 2
-    : ANKARA_CENTER[1];
-
-  const nearestZone = MOCK_ZONE_CONTROLLERS.reduce((nearest, candidate) => {
-    const nearestDistance =
-      (nearest.latitude - centerLatitude) ** 2 +
-      (nearest.longitude - centerLongitude) ** 2;
-    const candidateDistance =
-      (candidate.latitude - centerLatitude) ** 2 +
-      (candidate.longitude - centerLongitude) ** 2;
-
-    return candidateDistance < nearestDistance ? candidate : nearest;
-  });
-
-  return {
-    avatarStyle: leaderboardLeader?.avatar_style ?? "amber_shield",
-    districtName: nearestZone.districtName,
-    topPlayerName:
-      leaderboardLeader?.username ??
-      leaderboardLeader?.public_display_name ??
-      nearestZone.topPlayerName,
-    playerRank: leaderboardLeader?.level_label ?? nearestZone.playerRank,
-    playerScore: leaderboardLeader?.points ?? nearestZone.playerScore,
-    streakDays: nearestZone.streakDays,
-  };
 }
 
 function MapKeyboardFocus() {
