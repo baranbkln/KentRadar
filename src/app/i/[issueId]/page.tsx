@@ -24,13 +24,13 @@ export async function generateMetadata({
 
   if (!issue) {
     return {
-      title: "Yol sorunu bulunamadı | YolDurumu",
+      title: "Yol sorunu bulunamadı",
       description:
         "Bu yol sorunu bulunamadı veya artık aktif haritada görünmüyor.",
     };
   }
 
-  const title = `${categoryLabels[issue.category]} · ${issue.open_days} gündür açık görünüyor | YolDurumu`;
+  const title = `${categoryLabels[issue.category]} · ${issue.open_days} gündür açık görünüyor`;
   const description = getIssueShareDescription(issue);
   const url = getIssuePublicUrl(issue.id);
 

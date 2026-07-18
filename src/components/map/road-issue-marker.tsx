@@ -1,12 +1,11 @@
 "use client";
 
-import L from "leaflet";
+import { useMemo } from "react";
 import { Marker } from "react-leaflet";
-import {
-  calculateIssueIntensity,
-  getIssueMarkerStyle,
-} from "@/lib/issues/issue-intensity";
+import { createRankIcon } from "@/components/map/custom-marker";
+import { calculateIssueIntensity } from "@/lib/issues/issue-intensity";
 import type { PublicRoadIssue } from "@/lib/road-issues/types";
+import { getUserRank } from "@/utils/ranks";
 
 type RoadIssueMarkerProps = {
   issue: PublicRoadIssue;
@@ -23,19 +22,21 @@ const categoryMarkerText: Record<PublicRoadIssue["category"], string> = {
   other: "D",
 };
 
+const MOCK_REPORTER_SCORES = [30, 120, 350, 720] as const;
+
 export function RoadIssueMarker({
   issue,
   isSelected,
   onSelect,
 }: RoadIssueMarkerProps) {
   const intensity = calculateIssueIntensity(issue);
-  const markerStyle = getIssueMarkerStyle(intensity.level);
-  const icon = L.divIcon({
-    className: "",
-    html: `<div class="road-issue-marker" data-intensity="${intensity.level}" style="background:${markerStyle.color}; color:${markerStyle.color}; opacity:${markerStyle.opacity}; box-shadow:${markerStyle.ring}; transform:${isSelected ? "scale(1.14)" : "scale(1)"};"><span style="color:white;">${categoryMarkerText[issue.category]}</span></div>`,
-    iconAnchor: [17, 40],
-    iconSize: [34, 42],
-  });
+  const reporterScore =
+    issue.reporter_score ?? getMockReporterScore(issue.id);
+  const reporterRank = getUserRank(reporterScore);
+  const icon = useMemo(
+    () => createRankIcon(reporterScore, { isSelected }),
+    [isSelected, reporterScore],
+  );
 
   return (
     <Marker
@@ -45,7 +46,16 @@ export function RoadIssueMarker({
       }}
       icon={icon}
       position={[issue.latitude, issue.longitude]}
-      title={`${categoryMarkerText[issue.category]} yol sorunu · ${intensity.label}`}
+      title={`${categoryMarkerText[issue.category]} yol sorunu · ${intensity.label} · ${reporterRank.title}`}
     />
   );
+}
+
+function getMockReporterScore(issueId: string) {
+  const hash = Array.from(issueId).reduce(
+    (total, character) => (total * 31 + character.charCodeAt(0)) >>> 0,
+    0,
+  );
+
+  return MOCK_REPORTER_SCORES[hash % MOCK_REPORTER_SCORES.length];
 }

@@ -10,6 +10,12 @@ import { StreakBadge } from "@/components/gamification/streak-badge";
 import { UserRankBadge } from "@/components/gamification/user-rank-badge";
 import { AppShell } from "@/components/layout/app-shell";
 import { GlassPanel } from "@/components/map/glass-panel";
+import { BadgeShowcase } from "@/components/profile/badge-showcase";
+import { PlayerAvatar } from "@/components/profile/player-avatar";
+import {
+  ProfileSetupModal,
+  type PlayerProfileIdentity,
+} from "@/components/profile/profile-setup-modal";
 import { useCivicDashboard } from "@/hooks/use-civic-dashboard";
 import { useCivicScore } from "@/hooks/use-civic-score";
 import {
@@ -95,6 +101,8 @@ export function ProfilePage() {
   const [feedback, setFeedback] = useState<string | null>(null);
   const [currentStreak, setCurrentStreak] = useState(0);
   const [longestStreak, setLongestStreak] = useState(0);
+  const [playerIdentity, setPlayerIdentity] =
+    useState<PlayerProfileIdentity | null>(null);
   const [withdrawingIssueId, setWithdrawingIssueId] = useState<string | null>(
     null,
   );
@@ -167,7 +175,7 @@ export function ProfilePage() {
     const streakRequest = user
       ? supabase
           .from("profiles")
-          .select("current_streak_days, longest_streak_days")
+          .select("current_streak_days, longest_streak_days, username, avatar_style")
           .eq("id", user.id)
           .maybeSingle()
       : Promise.resolve({ data: null, error: null });
@@ -201,6 +209,7 @@ export function ProfilePage() {
     } else {
       setCurrentStreak(numberField(streakResult.data?.current_streak_days));
       setLongestStreak(numberField(streakResult.data?.longest_streak_days));
+      setPlayerIdentity(parsePlayerIdentity(streakResult.data));
     }
 
     if (watchedError && process.env.NODE_ENV === "development") {
@@ -363,6 +372,7 @@ export function ProfilePage() {
     setWatchedIssues([]);
     setCurrentStreak(0);
     setLongestStreak(0);
+    setPlayerIdentity(null);
     resetDashboard();
     resetScore();
     setFeedback("Çıkış yapıldı.");
@@ -448,6 +458,25 @@ export function ProfilePage() {
                 <h1 className="text-2xl font-semibold tracking-normal text-ink">
                   Profilim
                 </h1>
+                {playerIdentity ? (
+                  <div className="mt-3 flex items-center gap-2">
+                    <PlayerAvatar
+                      avatarStyle={playerIdentity.avatarStyle}
+                      className="size-10"
+                      label={`${playerIdentity.username} avatarı`}
+                    />
+                    <div className="min-w-0">
+                      <p className="truncate text-base font-semibold text-ink">
+                        @{playerIdentity.username}
+                      </p>
+                      <p className="mt-0.5 text-sm text-ink-muted">
+                        {scoreSummary.confirmed_points.toLocaleString("tr-TR")} Katkı
+                        Puanı - {summary.active_report_count} Bildirim -{" "}
+                        {dashboard.resolved_count} Çözüm
+                      </p>
+                    </div>
+                  </div>
+                ) : null}
                 <p className="mt-2 max-w-2xl text-sm leading-6 text-ink-muted">
                   Bildirdiğin yol sorunlarını ve katkılarını buradan takip
                   edebilirsin.
@@ -490,6 +519,7 @@ export function ProfilePage() {
                 dashboard={dashboardError ? toDashboardFallback(summary, watchedIssues.length) : dashboard}
                 isLoading={isLoadingDashboard}
               />
+              <BadgeShowcase />
               <CivicScorePanel
                 currentStreak={currentStreak}
                 events={scoreEvents}
@@ -567,6 +597,13 @@ export function ProfilePage() {
           )}
         </div>
       </main>
+      <ProfileSetupModal
+        authStatus={authStatus}
+        onCompleted={(profile) => {
+          setPlayerIdentity(profile);
+          void loadProfile();
+        }}
+      />
     </AppShell>
   );
 }
@@ -607,7 +644,7 @@ function CivicDashboardPanel({
     ["Takip ettiklerin", dashboard.watched_issue_count],
     ["Doğruladıkların", dashboard.verification_count],
     ["Hasar bildirimlerin", dashboard.damage_report_count],
-    ["Çözüldü işaretlerin", dashboard.solved_report_count],
+    ["Çözüme katkın", dashboard.resolved_count],
     ["Geri çekilenler", dashboard.withdrawn_report_count],
   ] as const;
   const hasImpact =
@@ -628,7 +665,7 @@ function CivicDashboardPanel({
             Kişisel Etki Karnesi
           </h2>
           <p className="mt-1 max-w-2xl text-sm leading-6 text-ink-muted">
-            YolDurumu’na yaptığın katkıların ve takip ettiğin sorunların özeti.
+            KentRadar’a yaptığın katkıların ve takip ettiğin sorunların özeti.
           </p>
         </div>
         {isLoading ? (
@@ -743,7 +780,7 @@ function CivicScorePanel({
           </p>
           <h2 className="mt-1 text-xl font-semibold text-ink">Etki Puanı</h2>
           <p className="mt-1 max-w-2xl text-sm leading-6 text-ink-muted">
-            Etki Puanı, YolDurumu’na yaptığın doğrulanabilir katkıları gösterir.
+            Etki Puanı, KentRadar’a yaptığın doğrulanabilir katkıları gösterir.
           </p>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -1372,6 +1409,7 @@ function toDashboardFallback(
     received_solved_count: 0,
     received_verification_count: 0,
     received_watcher_count: 0,
+    resolved_count: summary.solved_report_count,
     watched_issue_count: watchedCount,
   };
 }
@@ -1615,6 +1653,31 @@ function toProfileEntry({
 function numberField(value: unknown) {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function parsePlayerIdentity(value: unknown): PlayerProfileIdentity | null {
+  if (!value || typeof value !== "object") return null;
+  const record = value as Record<string, unknown>;
+  if (
+    typeof record.username !== "string" ||
+    typeof record.avatar_style !== "string"
+  ) {
+    return null;
+  }
+
+  if (
+    record.avatar_style !== "cyan_user" &&
+    record.avatar_style !== "amber_shield" &&
+    record.avatar_style !== "emerald_compass" &&
+    record.avatar_style !== "slate_wrench"
+  ) {
+    return null;
+  }
+
+  return {
+    avatarStyle: record.avatar_style,
+    username: record.username,
+  };
 }
 
 function daysOpen(firstReportedAt: string) {

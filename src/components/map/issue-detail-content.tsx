@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { MagicLinkForm } from "@/components/auth/magic-link-form";
 import { IssueWatchButton } from "@/components/issues/issue-watch-button";
+import { IssueReporterIdentity } from "@/components/moderation/issue-reporter-identity";
 import {
   categoryLabels,
   severityLabels,
@@ -187,6 +188,8 @@ export function IssueDetailContent({
       />
 
       <FeedbackSlot feedback={visibleFeedback} />
+
+      <IssueReporterIdentity issueId={issue.id} />
 
       <div className="grid grid-cols-2 gap-1.5 text-sm">
         <MiniMetric

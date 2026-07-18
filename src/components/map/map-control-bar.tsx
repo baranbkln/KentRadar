@@ -14,10 +14,12 @@ import {
 import Link from "next/link";
 import { MagicLinkForm } from "@/components/auth/magic-link-form";
 import { AnimatedScore } from "@/components/gamification/animated-score";
+import { NotificationBell } from "@/components/layout/notification-bell";
 import { ActiveFilterSummary } from "@/components/map/active-filter-summary";
 import { FilterSheet } from "@/components/map/filter-sheet";
 import { FloatingMapButton } from "@/components/map/floating-map-button";
 import { GlassPanel } from "@/components/map/glass-panel";
+import { PlayerAvatar } from "@/components/profile/player-avatar";
 import type { AccountSummary } from "@/hooks/use-account-summary";
 import type { RoadIssueFilters } from "@/lib/road-issues/types";
 
@@ -45,6 +47,7 @@ type MapControlBarProps = {
   onToggleIssueRankingPreview: () => void;
   onToggleLeaderboardPreview: () => void;
   onToggleProfilePreview: () => void;
+  onNotificationOpen: () => void;
   onUseLocation: () => void;
 };
 
@@ -72,6 +75,7 @@ export function MapControlBar({
   onToggleIssueRankingPreview,
   onToggleLeaderboardPreview,
   onToggleProfilePreview,
+  onNotificationOpen,
   onUseLocation,
 }: MapControlBarProps) {
   return (
@@ -82,7 +86,7 @@ export function MapControlBar({
             <div className="min-w-0 shrink-0">
               <div className="flex items-center gap-2">
                 <h1 className="text-base font-semibold leading-tight md:text-lg">
-                  YolDurumu
+                  KentRadar
                 </h1>
                 <Link
                   aria-label="Projenin Amacı"
@@ -156,7 +160,16 @@ export function MapControlBar({
               <span className="hidden 2xl:inline">Son Çözülenler</span>
             </Link>
             {authStatus === "authenticated" ? (
+              <NotificationBell onOpen={onNotificationOpen} />
+            ) : null}
+            {authStatus === "authenticated" ? (
               <div className="hidden min-h-11 items-center gap-1.5 rounded-full bg-white/55 px-2 text-sm font-semibold text-ink sm:inline-flex">
+                <PlayerAvatar
+                  avatarStyle={accountSummary.avatarStyle}
+                  className="size-8 rounded-xl"
+                  iconClassName="size-4"
+                  label={`${accountSummary.username ?? "Oyuncu"} avatarı`}
+                />
                 <button
                   aria-expanded={isProfilePreviewOpen}
                   className="max-w-[168px] truncate rounded-full px-2 py-1 text-left transition hover:bg-white/70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-road-blue lg:max-w-[220px]"
@@ -177,7 +190,7 @@ export function MapControlBar({
                         )}
                   </span>
                   <span className="block truncate text-[11px] leading-4 text-ink-muted">
-                    {shortenEmail(userEmail)}
+                    {accountSummary.username ?? shortenEmail(userEmail)}
                   </span>
                 </button>
                 <button

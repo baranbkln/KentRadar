@@ -10,16 +10,16 @@ type RateLimitBucket = {
 };
 
 type RateLimitGlobal = typeof globalThis & {
-  __yolDurumuRateLimitBuckets?: Map<string, RateLimitBucket>;
-  __yolDurumuRateLimitSweepAt?: number;
+  __kentRadarRateLimitBuckets?: Map<string, RateLimitBucket>;
+  __kentRadarRateLimitSweepAt?: number;
 };
 
 const rateLimitGlobal = globalThis as RateLimitGlobal;
 const buckets =
-  rateLimitGlobal.__yolDurumuRateLimitBuckets ??
+  rateLimitGlobal.__kentRadarRateLimitBuckets ??
   new Map<string, RateLimitBucket>();
 
-rateLimitGlobal.__yolDurumuRateLimitBuckets = buckets;
+rateLimitGlobal.__kentRadarRateLimitBuckets = buckets;
 
 function getClientIp(request: NextRequest): string {
   const forwardedFor = request.headers.get("x-forwarded-for");
@@ -38,7 +38,7 @@ function shouldRateLimit(request: NextRequest): boolean {
 }
 
 function sweepExpiredBuckets(now: number) {
-  const nextSweepAt = rateLimitGlobal.__yolDurumuRateLimitSweepAt ?? 0;
+  const nextSweepAt = rateLimitGlobal.__kentRadarRateLimitSweepAt ?? 0;
   if (now < nextSweepAt && buckets.size <= MAX_TRACKED_IPS) return;
 
   for (const [ip, bucket] of buckets) {
@@ -55,7 +55,7 @@ function sweepExpiredBuckets(now: number) {
     }
   }
 
-  rateLimitGlobal.__yolDurumuRateLimitSweepAt = now + WINDOW_MS;
+  rateLimitGlobal.__kentRadarRateLimitSweepAt = now + WINDOW_MS;
 }
 
 export function middleware(request: NextRequest) {

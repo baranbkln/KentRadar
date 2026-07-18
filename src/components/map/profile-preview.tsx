@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ArrowLeft, ExternalLink, LogOut, X } from "lucide-react";
 import { GlassPanel } from "@/components/map/glass-panel";
+import { PlayerAvatar } from "@/components/profile/player-avatar";
 import type { AccountSummary } from "@/hooks/use-account-summary";
 
 type ProfilePreviewProps = {
@@ -36,6 +37,17 @@ export function ProfilePreview({
               <ArrowLeft className="size-5" />
             </button>
             <div className="min-w-0">
+              <div className="mb-2 flex items-center gap-2">
+                <PlayerAvatar
+                  avatarStyle={accountSummary.avatarStyle}
+                  className="size-9 rounded-xl"
+                  iconClassName="size-4"
+                  label={`${accountSummary.username ?? "Oyuncu"} avatarı`}
+                />
+                <p className="truncate text-sm font-semibold text-ink">
+                  {accountSummary.username ?? "Oyuncu profili"}
+                </p>
+              </div>
               <h2 className="text-base font-semibold text-ink">Profilim</h2>
               <p className="mt-1 truncate text-sm text-ink-muted">
                 {userEmail ?? "Hesap bilgileri"}

@@ -3,9 +3,9 @@ import { AppShell } from "@/components/layout/app-shell";
 import { GlassPanel } from "@/components/map/glass-panel";
 
 export const metadata: Metadata = {
-  title: "Gizlilik Politikası ve Kişisel Verilerin Korunması | YolDurumu",
+  title: "Gizlilik Politikası ve Kişisel Verilerin Korunması",
   description:
-    "YolDurumu gizlilik politikası ve kişisel verilerin korunmasına ilişkin bilgilendirme metni.",
+    "KentRadar gizlilik politikası ve kişisel verilerin korunmasına ilişkin bilgilendirme metni.",
 };
 
 export default function PrivacyPage() {
@@ -16,7 +16,7 @@ export default function PrivacyPage() {
           <article className="text-[15px] leading-7 text-ink-muted md:text-base md:leading-8">
             <header className="border-b border-slate-200/80 pb-6 md:pb-8">
               <p className="text-sm font-semibold text-road-blue">
-                YolDurumu
+                KentRadar
               </p>
               <h1 className="mt-2 text-2xl font-semibold leading-tight text-ink md:text-3xl">
                 Gizlilik Politikası ve Kişisel Verilerin Korunması
@@ -29,7 +29,7 @@ export default function PrivacyPage() {
                   1. Veri Sorumlusu
                 </h2>
                 <p className="mt-3">
-                  [WEBSITE_NAME] (&quot;Platform&quot;) olarak, kişisel
+                  KentRadar (&quot;Platform&quot;) olarak, kişisel
                   verilerinizin güvenliği ve gizliliği en büyük önceliğimizdir.
                   Bu metin, 6698 sayılı Kişisel Verilerin Korunması Kanunu
                   (&quot;KVKK&quot;) kapsamında veri sorumlusu sıfatıyla

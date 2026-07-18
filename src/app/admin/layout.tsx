@@ -7,8 +7,8 @@ import { GlassPanel } from "@/components/map/glass-panel";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
-  title: "Yönetim Paneli | YolDurumu",
-  description: "YolDurumu moderasyon ve yönetim paneli.",
+  title: "Yönetim Paneli",
+  description: "KentRadar moderasyon ve yönetim paneli.",
 };
 
 export default async function AdminLayout({

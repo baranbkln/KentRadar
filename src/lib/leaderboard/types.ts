@@ -8,6 +8,28 @@ export type LeaderboardRow = {
   period: LeaderboardPeriod;
   is_current_user: boolean;
   user_public_code: string | null;
+  username: string | null;
+  avatar_style: string;
+};
+
+export type LocalContributorRow = LeaderboardRow & {
+  city: string;
+  district: string | null;
+};
+
+export type RegionalLeaderboardRow = {
+  rank: number;
+  city: string;
+  district: string;
+  total_resolved: number;
+  total_reports: number;
+  total_verified: number;
+  total_issues: number;
+};
+
+export type IssueRegionOption = {
+  city: string;
+  district: string | null;
 };
 
 export const leaderboardTabs: {

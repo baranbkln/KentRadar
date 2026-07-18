@@ -98,6 +98,12 @@ function parseLeaderboardRows(value: unknown): LeaderboardRow[] {
           typeof record.user_public_code === "string"
             ? record.user_public_code
             : null,
+        username:
+          typeof record.username === "string" ? record.username : null,
+        avatar_style:
+          typeof record.avatar_style === "string"
+            ? record.avatar_style
+            : "cyan_user",
       },
     ];
   });

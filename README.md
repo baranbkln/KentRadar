@@ -1,4 +1,4 @@
-# YolDurumu
+# KentRadar
 
 Crowdsourced road issue map MVP. The first implementation stage sets up a Next.js, TypeScript, Tailwind CSS, and Supabase foundation.
 

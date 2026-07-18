@@ -8,15 +8,15 @@ export const metadata: Metadata = {
     process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
   ),
   title: {
-    default: "YolDurumu - Altyapı Sorunları Haritası",
-    template: "%s | YolDurumu",
+    default: "KentRadar - Altyapı Sorunları Haritası",
+    template: "%s | KentRadar",
   },
   description:
     "Şehrinizdeki çukur, bozuk yol ve altyapı sorunlarını harita üzerinde bildirin, topluluk doğrulamasıyla çözüme kavuşturun.",
-  applicationName: "YolDurumu",
+  applicationName: "KentRadar",
   appleWebApp: {
     capable: true,
-    title: "YolDurumu",
+    title: "KentRadar",
     statusBarStyle: "black-translucent",
   },
   keywords: [
@@ -26,9 +26,9 @@ export const metadata: Metadata = {
     "altyapı haritası",
     "topluluk doğrulaması",
   ],
-  authors: [{ name: "YolDurumu" }],
-  creator: "YolDurumu",
-  publisher: "YolDurumu",
+  authors: [{ name: "KentRadar" }],
+  creator: "KentRadar",
+  publisher: "KentRadar",
   alternates: {
     canonical: "/",
   },
@@ -36,8 +36,8 @@ export const metadata: Metadata = {
     type: "website",
     locale: "tr_TR",
     url: "/",
-    siteName: "YolDurumu",
-    title: "YolDurumu - Altyapı Sorunları Haritası",
+    siteName: "KentRadar",
+    title: "KentRadar - Altyapı Sorunları Haritası",
     description:
       "Şehrinizdeki çukur, bozuk yol ve altyapı sorunlarını harita üzerinde bildirin, topluluk doğrulamasıyla çözüme kavuşturun.",
     images: [
@@ -45,13 +45,13 @@ export const metadata: Metadata = {
         url: "/og-image.png",
         width: 1200,
         height: 630,
-        alt: "YolDurumu altyapı sorunları haritası",
+        alt: "KentRadar altyapı sorunları haritası",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "YolDurumu - Altyapı Sorunları Haritası",
+    title: "KentRadar - Altyapı Sorunları Haritası",
     description:
       "Şehrinizdeki çukur, bozuk yol ve altyapı sorunlarını bildirin ve toplulukla doğrulayın.",
     images: ["/og-image.png"],

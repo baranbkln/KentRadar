@@ -3,8 +3,8 @@ import { AppShell } from "@/components/layout/app-shell";
 import { GlassPanel } from "@/components/map/glass-panel";
 
 export const metadata: Metadata = {
-  title: "Kullanım Koşulları | YolDurumu",
-  description: "YolDurumu platformunun kullanım koşulları.",
+  title: "Kullanım Koşulları",
+  description: "KentRadar platformunun kullanım koşulları.",
 };
 
 export default function TermsPage() {
@@ -15,7 +15,7 @@ export default function TermsPage() {
           <article className="text-[15px] leading-7 text-ink-muted md:text-base md:leading-8">
             <header className="border-b border-slate-200/80 pb-6 md:pb-8">
               <p className="text-sm font-semibold text-road-blue">
-                YolDurumu
+                KentRadar
               </p>
               <h1 className="mt-2 text-2xl font-semibold leading-tight text-ink md:text-3xl">
                 Kullanım Koşulları
@@ -28,7 +28,7 @@ export default function TermsPage() {
                   1. Platformun Amacı ve Hukuki Statüsü
                 </h2>
                 <p className="mt-3">
-                  [WEBSITE_NAME], vatandaşların karşılaştıkları altyapı
+                  KentRadar, vatandaşların karşılaştıkları altyapı
                   sorunlarını harita üzerinde tarafsızca işaretleyebildikleri,
                   kitle kaynaklı (crowdsourced) bir veri gözlem ağıdır. Platform,
                   hiçbir resmi kurum, kuruluş veya belediye ile bağlantılı
@@ -77,7 +77,7 @@ export default function TermsPage() {
                 </h2>
                 <p className="mt-3">
                   Platformdaki veriler kullanıcı bildirimlerine ve topluluk
-                  doğrulamasına dayanır. [WEBSITE_NAME], haritadaki sorunların
+                  doğrulamasına dayanır. KentRadar, haritadaki sorunların
                   varlığını, anlık durumunu veya hasar potansiyelini garanti
                   etmez. Kullanıcılar, harita verilerine dayanarak aldıkları
                   kararlardan ve olası maddi/manevi zararlardan kendileri
@@ -91,7 +91,7 @@ export default function TermsPage() {
                 </h2>
                 <p className="mt-3">
                   Platforma eklediğiniz yol sorunları ve koordinat verilerinin
-                  (anonimleştirilmiş formatta) [WEBSITE_NAME] tarafından
+                  (anonimleştirilmiş formatta) KentRadar tarafından
                   yayınlanması, analiz edilmesi ve paylaşılması için platforma
                   bedelsiz ve kalıcı bir kullanım hakkı vermiş sayılırsınız.
                 </p>

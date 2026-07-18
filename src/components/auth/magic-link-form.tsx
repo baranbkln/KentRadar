@@ -1,6 +1,8 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import { useMagicLinkAuth } from "@/hooks/use-magic-link-auth";
+import { createOptionalClient } from "@/lib/supabase/browser";
 import { cn } from "@/lib/utils";
 
 type MagicLinkFormProps = {
@@ -20,6 +22,9 @@ export function MagicLinkForm({
   onSent,
   title,
 }: MagicLinkFormProps) {
+  const supabase = useMemo(() => createOptionalClient(), []);
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [googleError, setGoogleError] = useState<string | null>(null);
   const {
     cooldownSeconds,
     email,
@@ -30,7 +35,34 @@ export function MagicLinkForm({
     sendMagicLink,
     setEmail,
   } = useMagicLinkAuth({ defaultEmail, onSent });
-  const isSubmitDisabled = loading || isCoolingDown;
+  const isSubmitDisabled = loading || isCoolingDown || googleLoading;
+
+  const handleGoogleLogin = async () => {
+    setGoogleError(null);
+
+    if (!supabase) {
+      setGoogleError("Google ile giriş başlatılırken hata oluştu.");
+      return;
+    }
+
+    setGoogleLoading(true);
+
+    const { error: oauthError } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
+
+    if (oauthError) {
+      if (process.env.NODE_ENV === "development") {
+        console.warn("Google OAuth error", oauthError);
+      }
+
+      setGoogleError("Google ile giriş başlatılırken hata oluştu.");
+      setGoogleLoading(false);
+    }
+  };
 
   return (
     <form
@@ -68,9 +100,9 @@ export function MagicLinkForm({
       </label>
 
       <div aria-live="polite">
-        {error ? (
+        {error || googleError ? (
           <p className="rounded-2xl border border-red-200 bg-red-50/80 px-3 py-2 text-sm font-semibold leading-5 text-red-700">
-            {error}
+            {googleError ?? error}
           </p>
         ) : null}
         {message ? (
@@ -96,6 +128,50 @@ export function MagicLinkForm({
             ? `Tekrar gönder (${cooldownSeconds} sn)`
             : "Giriş bağlantısı gönder"}
       </button>
+
+      <div className="flex items-center gap-3" aria-hidden="true">
+        <span className="h-px flex-1 bg-slate-200" />
+        <span className="text-xs font-medium text-ink-subtle">Veya</span>
+        <span className="h-px flex-1 bg-slate-200" />
+      </div>
+
+      <button
+        className="inline-flex min-h-11 w-full items-center justify-center gap-2.5 rounded-full border border-slate-200 bg-white/80 px-4 text-sm font-semibold text-ink transition hover:border-slate-300 hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-road-blue disabled:cursor-not-allowed disabled:opacity-60"
+        disabled={loading || googleLoading}
+        onClick={() => void handleGoogleLogin()}
+        type="button"
+      >
+        <GoogleIcon className="size-5" />
+        {googleLoading ? "Google'a yönlendiriliyor..." : "Google ile Giriş Yap"}
+      </button>
     </form>
+  );
+}
+
+function GoogleIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      aria-hidden="true"
+      className={className}
+      viewBox="0 0 24 24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M21.6 12.23c0-.71-.06-1.4-.18-2.07H12v3.92h5.38a4.6 4.6 0 0 1-2 3.02v2.54h3.24c1.9-1.75 2.98-4.33 2.98-7.41Z"
+        fill="#4285F4"
+      />
+      <path
+        d="M12 22c2.7 0 4.98-.9 6.63-2.36l-3.24-2.54c-.9.6-2.05.96-3.39.96-2.61 0-4.82-1.77-5.61-4.14H3.04v2.62A10 10 0 0 0 12 22Z"
+        fill="#34A853"
+      />
+      <path
+        d="M6.39 13.92A6.01 6.01 0 0 1 6.08 12c0-.67.11-1.32.31-1.92V7.46H3.04A10 10 0 0 0 2 12c0 1.61.39 3.14 1.04 4.54l3.35-2.62Z"
+        fill="#FBBC05"
+      />
+      <path
+        d="M12 5.94c1.47 0 2.79.51 3.83 1.5l2.87-2.88A9.63 9.63 0 0 0 12 2a10 10 0 0 0-8.96 5.46l3.35 2.62C7.18 7.71 9.39 5.94 12 5.94Z"
+        fill="#EA4335"
+      />
+    </svg>
   );
 }

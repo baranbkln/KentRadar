@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { Snowflake, Sparkles, X } from "lucide-react";
+import { CheckCircle2, Clock3, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { DynamicRewardBonus } from "@/lib/road-issues/types";
 
@@ -16,12 +16,12 @@ const rewardContent: Record<
   { title: string; description: string }
 > = {
   CRITICAL_HIT: {
-    title: "Kritik Doğrulama!",
-    description: "3x Puan Çarpanı!",
+    title: "Ek katkı puanı",
+    description: "Doğrulama katkın için ek puan kaydedildi.",
   },
   COLD_CASE: {
-    title: "Soğuk Dava Çözüldü!",
-    description: "2x Puan Bonus!",
+    title: "Uzun süredir açık sorun katkısı",
+    description: "Eski bir sorunun güncellenmesine katkı sağladın.",
   },
 };
 
@@ -46,34 +46,36 @@ export function RewardAlert({
       <div
         role="status"
         className={cn(
-          "pointer-events-auto flex w-full max-w-sm items-center gap-3 rounded-2xl border px-4 py-3 shadow-2xl backdrop-blur-xl motion-safe:animate-pulse",
+          "pointer-events-auto flex w-full max-w-sm items-center gap-3 rounded-2xl border bg-slate-900/90 px-4 py-3 text-slate-200 shadow-[0_16px_36px_rgba(15,23,42,0.24)] backdrop-blur-xl",
           isCritical
-            ? "border-yellow-300/60 bg-yellow-300/90 text-yellow-950 shadow-yellow-400/25"
-            : "border-cyan-200/50 bg-slate-900/92 text-cyan-50 shadow-cyan-400/20",
+            ? "border-emerald-800"
+            : "border-slate-700",
         )}
       >
         <span
           className={cn(
             "grid size-11 shrink-0 place-items-center rounded-full",
-            isCritical ? "bg-yellow-950/10" : "bg-cyan-300/10",
+            isCritical
+              ? "bg-emerald-900/40 text-emerald-500"
+              : "bg-slate-800 text-blue-400",
           )}
         >
           {isCritical ? (
-            <Sparkles className="size-6" aria-hidden="true" />
+            <CheckCircle2 className="size-6" aria-hidden="true" />
           ) : (
-            <Snowflake className="size-6" aria-hidden="true" />
+            <Clock3 className="size-6" aria-hidden="true" />
           )}
         </span>
         <div className="min-w-0 flex-1">
-          <p className="font-bold">{content.title}</p>
-          <p className="text-sm font-semibold opacity-85">
+          <p className="font-semibold">{content.title}</p>
+          <p className="text-sm text-slate-400">
             {content.description}
             {typeof finalScore === "number" ? ` · ${finalScore} puan` : ""}
           </p>
         </div>
         <button
           type="button"
-          aria-label="Ödül bildirimini kapat"
+          aria-label="Katkı bildirimini kapat"
           onClick={onDismiss}
           className="grid size-11 shrink-0 place-items-center rounded-full transition hover:bg-black/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current"
         >

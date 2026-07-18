@@ -5,12 +5,12 @@ import { GlassPanel } from "@/components/map/glass-panel";
 
 const sections = [
   {
-    title: "YolDurumu nedir?",
-    body: "YolDurumu, vatandaşların bozuk yol, çukur, çökmüş asfalt, rögar kapağı problemi, su birikintisi ve benzeri yol sorunlarını harita üzerinde işaretleyebildiği; diğer kullanıcıların bu sorunları doğrulayabildiği, hasar bildirebildiği, çözüldü veya yanlış/burada değil şeklinde geri bildirim verebildiği, nötr ve veri odaklı bir şehir altyapısı gözlem platformudur.",
+    title: "KentRadar nedir?",
+    body: "KentRadar, vatandaşların bozuk yol, çukur, çökmüş asfalt, rögar kapağı problemi, su birikintisi ve benzeri yol sorunlarını harita üzerinde işaretleyebildiği; diğer kullanıcıların bu sorunları doğrulayabildiği, hasar bildirebildiği, çözüldü veya yanlış/burada değil şeklinde geri bildirim verebildiği, nötr ve veri odaklı bir şehir altyapısı gözlem platformudur.",
   },
   {
     title: "Ne değildir?",
-    body: "Platformun amacı bir şikayet forumu oluşturmak değildir. YolDurumu; yorum, siyasi tartışma, belediye suçlama veya kişisel itham içermeyen, tamamen harita ve veri merkezli bir yapıya sahiptir.",
+    body: "Platformun amacı bir şikayet forumu oluşturmak değildir. KentRadar; yorum, siyasi tartışma, belediye suçlama veya kişisel itham içermeyen, tamamen harita ve veri merkezli bir yapıya sahiptir.",
   },
   {
     title: "Temel fikir",
@@ -18,7 +18,7 @@ const sections = [
   },
   {
     title: "Uzun vadeli hedef",
-    body: "YolDurumu'nun uzun vadeli hedefi yalnızca \"çukur bildirilen bir harita\" olmak değildir. Asıl hedef, kullanıcıların kendi çevrelerindeki yol sorunlarını takip ettiği, katkılarının etkisini gördüğü, düzenli olarak geri döndüğü ve şehir altyapısına dair canlı bir veri katmanı oluşturduğu bir platforma dönüşmektir.",
+    body: "KentRadar'ın uzun vadeli hedefi yalnızca \"çukur bildirilen bir harita\" olmak değildir. Asıl hedef, kullanıcıların kendi çevrelerindeki yol sorunlarını takip ettiği, katkılarının etkisini gördüğü, düzenli olarak geri döndüğü ve şehir altyapısına dair canlı bir veri katmanı oluşturduğu bir platforma dönüşmektir.",
   },
 ];
 
@@ -49,13 +49,13 @@ export function AboutPage() {
               <div className="max-w-3xl">
                 <div className="inline-flex min-h-9 items-center gap-2 rounded-full border border-slate-200 bg-white/60 px-3 text-sm font-semibold text-road-blue">
                   <MapPinned className="size-4" />
-                  YolDurumu
+                  KentRadar
                 </div>
                 <h1 className="mt-4 text-3xl font-semibold tracking-normal text-ink md:text-5xl">
                   Projenin Amacı
                 </h1>
                 <p className="mt-4 text-base leading-7 text-ink-muted md:text-lg md:leading-8">
-                  YolDurumu, yol sorunlarını kişisel yorumlardan ayırarak harita,
+                  KentRadar, yol sorunlarını kişisel yorumlardan ayırarak harita,
                   doğrulama ve sayısal sinyaller üzerinden görünür hale getirmeyi
                   amaçlar.
                 </p>
@@ -93,7 +93,7 @@ export function AboutPage() {
                   Tarafsızlık ve veri yaklaşımı
                 </h2>
                 <p className="mt-2 text-sm leading-7 text-ink-muted">
-                  YolDurumu üzerinde yer alan veriler kullanıcı bildirimlerine
+                  KentRadar üzerinde yer alan veriler kullanıcı bildirimlerine
                   dayanır. Platform, herhangi bir kurum, belediye, kişi veya
                   siyasi aktör hakkında suçlayıcı yorum üretmeyi amaçlamaz.
                   Amaç, vatandaş katkısıyla yol sorunlarını daha görünür ve

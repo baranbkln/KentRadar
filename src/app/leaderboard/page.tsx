@@ -3,9 +3,9 @@ import { Suspense } from "react";
 import { LeaderboardPage } from "@/components/leaderboard/leaderboard-page";
 
 export const metadata: Metadata = {
-  title: "Katkıcı Sıralaması | YolDurumu",
+  title: "Katkıcı Sıralaması",
   description:
-    "YolDurumu'na yapılan doğrulanabilir katkıların Etki Puanı sıralaması.",
+    "KentRadar'a yapılan doğrulanabilir katkıların Etki Puanı sıralaması.",
 };
 
 export default function Page() {

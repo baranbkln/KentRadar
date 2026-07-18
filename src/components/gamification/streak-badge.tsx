@@ -1,5 +1,6 @@
 "use client";
 
+import { Activity } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type StreakBadgeProps = {
@@ -27,14 +28,14 @@ export function StreakBadge({
       className={cn(
         "inline-flex min-h-7 items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold",
         isActive
-          ? "border-orange-400/35 bg-orange-100/85 text-orange-800 shadow-[0_0_14px_rgba(249,115,22,0.18)]"
+          ? "border-emerald-300 bg-emerald-50 text-emerald-800"
           : "border-slate-200 bg-white/70 text-ink-muted",
         className,
       )}
       title={`En uzun seri: ${longest} gün`}
     >
-      {isActive ? <span aria-hidden="true">🔥</span> : null}
-      {isActive ? `${current} Günlük Seri!` : "Seri başlamadı"}
+      <Activity className="size-3.5" aria-hidden="true" />
+      {isActive ? `${current} gün aktif katkı` : "Aktif katkı serisi yok"}
     </span>
   );
 }

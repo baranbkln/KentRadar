@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "YolDurumu",
-    short_name: "YolDurumu",
+    name: "KentRadar",
+    short_name: "KentRadar",
     description: "Şehrinizin altyapı sorunlarını bildirin ve çözün.",
     start_url: "/",
     scope: "/",

@@ -155,6 +155,10 @@ button {
   .current-location-marker {
     animation: none;
   }
+
+  .live-ticker-item {
+    animation: none;
+  }
 }
 
 @keyframes current-location-pulse {
@@ -165,6 +169,22 @@ button {
   100% {
     box-shadow: 0 0 0 18px rgba(37, 99, 235, 0);
   }
+}
+
+@keyframes live-ticker-in {
+  from {
+    opacity: 0;
+    transform: translateX(-18px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.live-ticker-item {
+  animation: live-ticker-in 260ms ease-out both;
 }
 
 .glass-panel {

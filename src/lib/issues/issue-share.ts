@@ -28,7 +28,7 @@ export function getIssuePublicUrl(issueId: string, baseUrl?: string | null) {
 export function getIssueShareText(issue: ShareIssue) {
   const openDays = issue.open_days ?? calculateOpenDays(issue.first_reported_at);
 
-  return `YolDurumu'nda bildirilen bir yol sorunu: ${categoryLabels[issue.category]} · ${openDays} gündür açık görünüyor · ${issue.reporter_count} kullanıcı bildirdi.`;
+  return `KentRadar'da bildirilen bir yol sorunu: ${categoryLabels[issue.category]} · ${openDays} gündür açık görünüyor · ${issue.reporter_count} kullanıcı bildirdi.`;
 }
 
 export function getIssueShareDescription(issue: ShareIssue) {

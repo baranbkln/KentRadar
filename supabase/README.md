@@ -1,6 +1,6 @@
 # Supabase Setup
 
-This folder contains database migrations for the YolDurumu MVP.
+This folder contains database migrations for the KentRadar MVP.
 
 ## Apply Migrations
 

@@ -5,7 +5,8 @@ import { createOptionalClient } from "@/lib/supabase/browser";
 
 const SENT_COOLDOWN_SECONDS = 60;
 const RATE_LIMIT_COOLDOWN_SECONDS = 180;
-const STORAGE_PREFIX = "yoldurumu:auth:magic-link-cooldown";
+const STORAGE_PREFIX = "kentradar:auth:magic-link-cooldown";
+const LEGACY_STORAGE_PREFIX = "yoldurumu:auth:magic-link-cooldown";
 
 type CooldownReason = "sent" | "rate_limited";
 
@@ -155,6 +156,7 @@ export function useMagicLinkAuth({
       if (cooldownUntil <= nextNow) {
         if (normalizedEmail) {
           window.localStorage.removeItem(storageKey(normalizedEmail));
+          window.localStorage.removeItem(legacyStorageKey(normalizedEmail));
         }
 
         setCooldownUntil(null);
@@ -185,6 +187,10 @@ function storageKey(email: string) {
   return `${STORAGE_PREFIX}:${email}`;
 }
 
+function legacyStorageKey(email: string) {
+  return `${LEGACY_STORAGE_PREFIX}:${email}`;
+}
+
 function isValidEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
@@ -194,7 +200,11 @@ function readStoredCooldown(email: string) {
     return null;
   }
 
-  const rawValue = window.localStorage.getItem(storageKey(email));
+  const currentStorageKey = storageKey(email);
+  const previousStorageKey = legacyStorageKey(email);
+  const rawValue =
+    window.localStorage.getItem(currentStorageKey) ??
+    window.localStorage.getItem(previousStorageKey);
 
   if (!rawValue) {
     return null;
@@ -209,18 +219,23 @@ function readStoredCooldown(email: string) {
       (parsedValue.reason !== "sent" &&
         parsedValue.reason !== "rate_limited")
     ) {
-      window.localStorage.removeItem(storageKey(email));
+      window.localStorage.removeItem(currentStorageKey);
+      window.localStorage.removeItem(previousStorageKey);
       return null;
     }
 
     if (parsedValue.until <= Date.now()) {
-      window.localStorage.removeItem(storageKey(email));
+      window.localStorage.removeItem(currentStorageKey);
+      window.localStorage.removeItem(previousStorageKey);
       return null;
     }
 
+    window.localStorage.setItem(currentStorageKey, rawValue);
+    window.localStorage.removeItem(previousStorageKey);
     return parsedValue as StoredCooldown;
   } catch {
-    window.localStorage.removeItem(storageKey(email));
+    window.localStorage.removeItem(currentStorageKey);
+    window.localStorage.removeItem(previousStorageKey);
     return null;
   }
 }

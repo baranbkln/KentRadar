@@ -3,8 +3,8 @@ import { AppShell } from "@/components/layout/app-shell";
 import { GlassPanel } from "@/components/map/glass-panel";
 
 export const metadata: Metadata = {
-  title: "İletişim | YolDurumu",
-  description: "YolDurumu iletişim ve destek bilgileri.",
+  title: "İletişim",
+  description: "KentRadar iletişim ve destek bilgileri.",
 };
 
 export default function ContactPage() {
@@ -15,7 +15,7 @@ export default function ContactPage() {
           <article className="text-[15px] leading-7 text-ink-muted md:text-base md:leading-8">
             <header className="border-b border-slate-200/80 pb-6 md:pb-8">
               <p className="text-sm font-semibold text-road-blue">
-                YolDurumu
+                KentRadar
               </p>
               <h1 className="mt-2 text-2xl font-semibold leading-tight text-ink md:text-3xl">
                 İletişim
@@ -27,7 +27,7 @@ export default function ContactPage() {
                 Bizimle iletişime geç
               </h2>
               <p className="mt-3">
-                [WEBSITE_NAME] şu anda Açık Beta (Public Beta) aşamasındadır.
+                KentRadar şu anda Açık Beta (Public Beta) aşamasındadır.
                 Platformla ilgili geri bildirimleriniz, teknik destek
                 talepleriniz, veri silme işlemleriniz veya işbirlikleri için
                 bizimle aşağıdaki e-posta adresi üzerinden iletişime

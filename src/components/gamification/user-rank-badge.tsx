@@ -42,7 +42,7 @@ export function UserRankBadge({
         <>
           <button
             type="button"
-            aria-label="Rütbe sistemi hakkında bilgi"
+            aria-label="Güven düzeyi hakkında bilgi"
             className="ml-1 grid size-7 place-items-center rounded-full text-ink-muted transition hover:bg-white/80 hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-road-blue"
           >
             <Info className="size-3.5" aria-hidden="true" />
@@ -51,7 +51,8 @@ export function UserRankBadge({
             role="tooltip"
             className="pointer-events-none absolute bottom-full left-1/2 z-30 mb-2 w-64 -translate-x-1/2 rounded-xl border border-slate-200 bg-slate-950/95 px-3 py-2 text-center text-xs font-medium leading-5 text-white opacity-0 shadow-xl transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
           >
-            Puan kazandıkça rütbeniz ve doğrulamalarınızın etki katsayısı artar!
+            Doğrulanmış katkıların arttıkça güven düzeyin ve doğrulamalarının
+            etki katsayısı artar.
           </span>
         </>
       ) : null}

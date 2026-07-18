@@ -5,13 +5,14 @@ import {
   ArrowLeft,
   ArrowRight,
   MapPinPlus,
-  Medal,
+  ShieldCheck,
   UsersRound,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const ONBOARDING_STORAGE_KEY = "yoldurumu_onboarded";
+const ONBOARDING_STORAGE_KEY = "kentradar_onboarded";
+const LEGACY_ONBOARDING_STORAGE_KEY = "yoldurumu_onboarded";
 
 const steps = [
   {
@@ -29,10 +30,10 @@ const steps = [
     accentClassName: "bg-cyan-500/15 text-cyan-300 ring-cyan-300/20",
   },
   {
-    title: "Rütbe Kazan",
+    title: "Sivil Etkini Gör",
     description:
-      "Katkı sağladıkça etki puanı kazanın, rütbenizi yükseltin ve mahallenizin elçisi olun!",
-    icon: Medal,
+      "Katkıların doğrulandıkça güven düzeyini ve çevrendeki sorunların çözüm sürecine etkini takip et.",
+    icon: ShieldCheck,
     accentClassName: "bg-emerald-500/15 text-emerald-300 ring-emerald-300/20",
   },
 ] as const;
@@ -53,7 +54,13 @@ export function OnboardingModal() {
 
   useEffect(() => {
     try {
-      if (window.localStorage.getItem(ONBOARDING_STORAGE_KEY) !== "true") {
+      const hasCompletedOnboarding =
+        window.localStorage.getItem(ONBOARDING_STORAGE_KEY) === "true" ||
+        window.localStorage.getItem(LEGACY_ONBOARDING_STORAGE_KEY) === "true";
+
+      if (hasCompletedOnboarding) {
+        window.localStorage.setItem(ONBOARDING_STORAGE_KEY, "true");
+      } else {
         setIsOpen(true);
       }
     } catch {
@@ -96,7 +103,7 @@ export function OnboardingModal() {
       >
         <div className="flex items-center justify-between gap-3">
           <p className="text-xs font-semibold uppercase text-slate-400">
-            YolDurumu · Adım {stepIndex + 1}/{steps.length}
+            KentRadar · Adım {stepIndex + 1}/{steps.length}
           </p>
           <button
             ref={closeButtonRef}

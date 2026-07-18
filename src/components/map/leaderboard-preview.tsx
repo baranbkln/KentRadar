@@ -4,6 +4,7 @@ import { ArrowLeft, Check, ExternalLink, Trophy, X } from "lucide-react";
 import Link from "next/link";
 import { UserRankBadge } from "@/components/gamification/user-rank-badge";
 import { GlassPanel } from "@/components/map/glass-panel";
+import { PlayerAvatar } from "@/components/profile/player-avatar";
 import { useLeaderboard } from "@/hooks/use-leaderboard";
 import {
   type LeaderboardPeriod,
@@ -152,6 +153,12 @@ function LeaderboardPreviewItem({
           <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-white/80 text-xs font-semibold text-road-blue">
             {row.rank}
           </span>
+          <PlayerAvatar
+            avatarStyle={row.avatar_style}
+            className="size-8 rounded-xl"
+            iconClassName="size-4"
+            label={`${row.public_display_name} avatarı`}
+          />
           <div className="min-w-0">
             <div className="flex min-w-0 flex-wrap items-center gap-1.5">
               <p className="truncate text-sm font-semibold text-ink">

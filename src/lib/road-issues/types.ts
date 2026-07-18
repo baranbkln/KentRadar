@@ -24,6 +24,7 @@ export type PublicRoadIssue = {
   reporter_count: number;
   watcher_count: number;
   severity_score_avg: number;
+  reporter_score?: number | null;
   created_at: string;
   updated_at: string;
 };
@@ -119,6 +120,7 @@ export type ProfileSummary = {
 
 export type CivicDashboard = ProfileSummary & {
   watched_issue_count: number;
+  resolved_count: number;
   received_verification_count: number;
   received_damage_count: number;
   received_solved_count: number;
